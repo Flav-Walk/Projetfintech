@@ -98,5 +98,24 @@ export interface ContributionResponse {
   settled_at: string | null;
 }
 
+export type ProposalStatus = 'active' | 'withdrawn' | 'unavailable';
+export type CapsuleStatus = 'draft' | 'published';
+export type NotificationKind = 'invitation' | 'vote_closing' | 'task_assigned' | 'capsule_open' | 'gift_selected' | 'member_joined' | 'message';
+
+/** Réactions autorisées par la base (proposal_reactions.emoji). */
+export const REACTIONS = ['❤️', '😍', '😂', '🤔', '👎'] as const;
+export type Reaction = (typeof REACTIONS)[number];
+
+export interface CapsuleStats {
+  words: number;
+  photos: number;
+  authors: number;
+}
+
+export interface ClaimResult {
+  status: 'claimed' | 'taken' | 'already_yours';
+  assignee_id?: string | null;
+}
+
 /** Durées de validité proposées pour un lien d'invitation (heures). */
 export const INVITATION_EXPIRY_CHOICES = [24, 72, 168, 720] as const;
