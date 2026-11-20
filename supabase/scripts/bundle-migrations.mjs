@@ -8,14 +8,30 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const from = process.argv[2] ?? '';
-const files = readdirSync(join(root, 'migrations'))
-  .filter((f) => f.endsWith('.sql') && f >= from)
-  .sort();
+const all = readdirSync(join(root, 'migrations')).filter((f) => f.endsWith('.sql')).sort();
+const files = all.filter((f) => f >= from);
+const versionOf = (f) => f.split('_')[0];
+const prior = all.filter((f) => f < from).map(versionOf);
+const sqlList = (vs) => (vs.length ? vs.map((v) => `'${v}'`).join(', ') : '');
 
 const parts = [
   '-- COMPLICE : migrations regroupées. Exécuter en une fois dans le SQL Editor (rôle postgres).',
   '-- Tout est dans une transaction : en cas d’erreur, rien n’est appliqué.',
+  `-- Contenu : ${files.map(versionOf).join(', ')}${prior.length ? ` ; prérequis déjà enregistrés : ${prior.join(', ')}` : ''}.`,
   'begin;',
+  'create schema if not exists supabase_migrations;',
+  'create table if not exists supabase_migrations.schema_migrations (version text primary key, statements text[], name text);',
+  // Garde-fou : refuse de s'exécuter sur une base dont l'historique ne correspond pas.
+  `do $guard$
+declare v_missing text; v_present text;
+begin
+  select string_agg(v, ', ') into v_missing from unnest(array[${sqlList(prior)}]::text[]) v
+    where not exists (select 1 from supabase_migrations.schema_migrations m where m.version = v);
+  select string_agg(version, ', ') into v_present from supabase_migrations.schema_migrations
+    where version = any (array[${sqlList(files.map(versionOf))}]::text[]);
+  if v_missing is not null then raise exception 'COMPLICE : migrations prérequises absentes : %', v_missing; end if;
+  if v_present is not null then raise exception 'COMPLICE : migrations déjà enregistrées : % (ne rien rejouer)', v_present; end if;
+end $guard$;`,
 ];
 for (const f of files) {
   const version = f.split('_')[0];
