@@ -15,6 +15,11 @@ Option A — un seul copier-coller (recommandé) :
    pour ne prendre que les migrations à partir d'une version).
 2. Supabase > SQL Editor > New query > coller tout le fichier > Run. Une seule transaction : en cas
    d'erreur, rien n'est appliqué.
+3. Avec une version de départ, le fichier commence par un garde-fou : il s'arrête sans rien modifier si
+   une migration antérieure n'est pas enregistrée, ou si l'une des migrations incluses l'est déjà.
+
+État au 2026-11-20 : la migration 1 est appliquée et enregistrée. Pour la suite :
+`npm run db:bundle -- 20261120000200` (fichier `supabase/.bundle/apply.sql`, migrations 2 à 6), puis étape 2.
 
 Option B — script avec jeton d'accès personnel (supabase.com/dashboard/account/tokens, préfixe `sbp_`) :
 `supabase/.env` (ignoré par Git) contient `SUPABASE_ACCESS_TOKEN=sbp_…`, puis
@@ -41,6 +46,11 @@ Sans pg_cron, l'app déclenche aussi `refresh_reminders()` à l'ouverture et au 
 
 ### Auth
 
+Lecture publique (`GET /auth/v1/settings`, 2026-11-20) : e-mail activé, inscription ouverte,
+**confirmation d'e-mail obligatoire** (`mailer_autoconfirm: false`), aucun fournisseur tiers. Les
+Redirect URLs, modèles d'e-mail et SMTP ne sont pas lisibles sans accès administrateur : à contrôler
+dans le tableau de bord.
+
 Authentication > URL Configuration > **Redirect URLs** : ajouter
 - `complice://**` (development build et version installée)
 - `exp://**` (Expo Go en développement)
@@ -49,9 +59,10 @@ Authentication > Email Templates : pour permettre la saisie d'un **code** (utile
 liens s'ouvrent mal), ajouter `{{ .Token }}` dans les modèles « Confirm signup » et « Reset Password »,
 par exemple : `Ton code Complice : {{ .Token }}`.
 
-Le service d'e-mail intégré de Supabase est limité (quelques e-mails par heure). Pour des tests à
-plusieurs comptes, configurer un SMTP (Authentication > SMTP Settings) ou créer les comptes avec le
-script de démo (section 4), qui les confirme directement.
+Le service d'e-mail intégré de Supabase est limité (quelques e-mails par heure) et n'envoie qu'aux
+adresses des membres de l'organisation Supabase. Pour des tests à plusieurs comptes, configurer un SMTP
+(Authentication > SMTP Settings) ou créer les comptes avec le script de démo (section 4), qui les
+confirme directement (nécessite la clé secrète dans `backend/.env`).
 
 ### Clé secrète
 
@@ -140,6 +151,16 @@ Service créé à la main (hors Blueprint) : complice-api > **Settings > Build &
 Contrôle : après un push sur `main`, `/health` renvoie `"version"` = les 7 premiers caractères du
 commit de `main` (variable `RENDER_GIT_COMMIT`). `/` répond 404 : c'est normal, l'API n'a pas de page d'accueil.
 
+`render.yaml` déclare un `buildFilter` : seul un push qui modifie `backend/**`, `packages/shared/**`,
+`package.json` ou `package-lock.json` déclenche un déploiement. Un push limité à `mobile/`, `docs/` ou
+`supabase/` laisse volontairement l'ancienne version en ligne.
+
+Diagnostic du 2026-11-20 : `/health` sert `a640951` alors que `main` et `backend` sont à `6fa6d61`, et
+que deux commits intermédiaires (`de186f2`, `24b20d3`) touchent les chemins filtrés. Le build reproduit
+localement réussit. La cause est donc côté Render (auto-deploy désactivé, build en échec, branche ou
+Blueprint non synchronisé) : à lire dans complice-api > **Events** et **Logs**, puis
+**Manual Deploy > Deploy latest commit** si besoin.
+
 ## 6. Premier test sur téléphone (Expo Go)
 
 1. Installer **Expo Go** (Play Store / App Store), version compatible SDK 58.
@@ -153,6 +174,9 @@ commit de `main` (variable `RENDER_GIT_COMMIT`). `/` répond 404 : c'est normal,
    Si le téléphone n'est pas sur le même réseau que le PC : `cd mobile && npx expo start --tunnel`.
 4. Ouvrir `https://complice-api.onrender.com/health` dans le navigateur du téléphone une minute avant
    (réveil du plan gratuit).
+
+Photos : l'app n'utilise que la galerie. `app.json` désactive les permissions caméra et micro
+d'`expo-image-picker` (Android ne demande plus `RECORD_AUDIO`, iOS n'affiche plus de texte caméra).
 
 Toutes les dépendances sont celles du SDK 58 (`npx expo install --check` : à jour) et fonctionnent dans
 Expo Go ; un development build n'est nécessaire que pour les liens `complice://` et les notifications push.

@@ -6,7 +6,35 @@
 | 2 | Comptes, création d'événement, invitations, accueil d'événement, membres, réglages, profil | **fait côté code**, non vérifié contre Supabase (migrations à appliquer) |
 | 3 | Propositions et votes, contributions simulées | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
 | 4 | Missions, discussion, capsule, timbres, rappels | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
-| 5 | Vérification distante multi-comptes, téléphone, revue sécurité/accessibilité | **bloqué** : migrations non appliquées à distance |
+| 5 | Vérification distante multi-comptes, téléphone, revue sécurité/accessibilité | **en cours** : migration 1/6 appliquée à distance ; 2 à 6 prêtes, à appliquer |
+
+## Reprise — application distante (2026-11-20, depuis `6fa6d61`)
+
+### Vérifié (exécuté)
+- MCP Supabase connecté au projet `uecptmijcjwmzdebeugk`. Base trouvée vierge, puis **migration 1
+  (`20261120000100_core`) appliquée** et enregistrée (version = préfixe du fichier, format CLI).
+  Contrôle à distance : 8 tables, 22 fonctions, 10 politiques, 4 types, 0 utilisateur, aucun bucket.
+- Fichier des migrations 2 à 6 (`npm run db:bundle -- 20261120000200`) validé sur PGlite à partir de
+  l'état distant (migration 1 seule) : `verify.sql` 9/9 OK ; relance refusée par le garde-fou ;
+  refusé si la migration 1 n'est pas enregistrée, sans aucune modification.
+- `npm test` : SQL 35/35, shared 5/5, backend 8/8 ; typecheck OK ; ESLint mobile 0 problème.
+- Auth (lecture publique) : e-mail seul, inscription ouverte, confirmation d'e-mail obligatoire.
+- Render : `/health` 200, `admin_configured: true`, **version `a640951`** alors que `main` = `6fa6d61` ;
+  `/i/<jeton 64 hex>` 200, `no-store`, lien `complice://invite/…` présent. Build Render reproduit en
+  local (shared + backend) : OK.
+- Mobile : `npx expo install --check` à jour ; export Android (Hermes) et web réussi ; permissions
+  caméra/micro d'`expo-image-picker` retirées (inutilisées) ; KeyboardAvoidingView sur 6 écrans de saisie.
+
+### Bloqué
+- **Migrations 2 à 6** : trois appels d'écriture MCP (`execute_sql` ×2, `apply_migration` ×1) refusés
+  (`declined`, sans cause). Aucune règle `deny` ni hook ne vise `mcp__supabase__*` : refus à la
+  validation de l'appel. Débloquer : appliquer le fichier dans le SQL Editor (docs/SETUP.md §1), ou
+  ajouter `mcp__supabase__execute_sql` et `mcp__supabase__apply_migration` à `permissions.allow`.
+- **Render** : cause du retard à lire dans complice-api > Events / Logs (extension Chrome non connectée,
+  pas de clé API Render).
+- **Parcours multi-comptes** : après les migrations ; comptes confirmés via `seed:demo` (clé secrète dans
+  `backend/.env`) ou SMTP personnalisé.
+- Graphify : aucun index (`graphify-out/` absent) ; Floorplan : non installé.
 
 ## Lots 3-4 — 2026-11-20
 
