@@ -1,4 +1,8 @@
-import type { NextAction } from '@complice/shared';
+import type { BadgeKind, NextAction } from '@complice/shared';
+import { StampShelf, STAMP_ORDER } from '@/components/stamps';
+import { useAuth } from '@/lib/auth';
+import { useBadges } from '@/lib/capsule';
+import type { MemberRow } from '@/lib/types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowRight, CalendarCheck, ChevronLeft, ChevronRight, ClipboardList, MessageCircleHeart, Settings2, UserPlus, Users } from 'lucide-react-native';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
@@ -28,6 +32,7 @@ const NEXT: Record<NextAction, { title: string; label: string; route: string }> 
 
 export default function EventHome() {
   const id = useEventId();
+  const { session } = useAuth();
   const params = useLocalSearchParams<{ created?: string; welcome?: string }>();
   useEventRealtime(id);
   const event = useEvent(id);
@@ -164,6 +169,8 @@ export default function EventHome() {
               </Row>
             </Card>
 
+            <HelpCard eventId={id} me={session?.user.id} members={preparers} />
+
             <Card style={{ gap: space.md }}>
               <T v="h3">Dates importantes</T>
               <DateLine label="Fin du vote" iso={e.votes_close_at} tz={e.timezone} />
@@ -207,6 +214,44 @@ export default function EventHome() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Les différentes formes d'aide, valorisées sans lien avec le montant donné. */
+function HelpCard({ eventId, me, members }: { eventId: string; me?: string; members: MemberRow[] }) {
+  const badges = useBadges(eventId);
+  const byUser = new Map<string, Set<BadgeKind>>();
+  for (const b of badges.data ?? []) {
+    if (!byUser.has(b.user_id)) byUser.set(b.user_id, new Set());
+    byUser.get(b.user_id)!.add(b.badge);
+  }
+  const mine = byUser.get(me ?? '') ?? new Set<BadgeKind>();
+  const others = members.filter((m) => m.user_id !== me && (byUser.get(m.user_id)?.size ?? 0) > 0);
+  return (
+    <Card style={{ gap: space.md }}>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <T v="h3">Mes timbres</T>
+        <T v="label" color={colors.inkSoft}>
+          {mine.size}/{STAMP_ORDER.length}
+        </T>
+      </Row>
+      <StampShelf earned={mine} />
+      {others.length > 0 ? (
+        <View style={{ gap: space.sm, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space.md }}>
+          <T v="label" color={colors.inkSoft}>
+            Les coups de main du groupe
+          </T>
+          {others.map((m) => (
+            <Row key={m.user_id} style={{ justifyContent: 'space-between' }}>
+              <T v="small" style={{ flex: 1 }} numberOfLines={1}>
+                {m.profiles?.display_name ?? 'Membre'}
+              </T>
+              <StampShelf earned={byUser.get(m.user_id)!} compact />
+            </Row>
+          ))}
+        </View>
+      ) : null}
+    </Card>
   );
 }
 

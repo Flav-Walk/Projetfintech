@@ -1,3 +1,4 @@
+import { BADGE_LABELS, type BadgeKind } from '@complice/shared';
 import type { ActivityRow } from './types';
 
 /** Fuseau de l'appareil (repli Europe/Paris). */
@@ -62,7 +63,7 @@ export function activityLabel(a: ActivityRow): string {
     case 'member_joined':
       return `${who} a rejoint le groupe`;
     case 'proposal_added':
-      return `${who} a ajouté une idée`;
+      return a.data.title ? `${who} a proposé « ${String(a.data.title)} »` : `${who} a ajouté une idée`;
     case 'gift_selected':
       return `${who} a choisi le cadeau`;
     case 'contribution_confirmed':
@@ -71,8 +72,10 @@ export function activityLabel(a: ActivityRow): string {
       return `${who} a pris la mission « ${String(a.data.title ?? '')} »`;
     case 'task_done':
       return `${who} a terminé « ${String(a.data.title ?? '')} »`;
-    case 'badge_awarded':
-      return `${who} a gagné un timbre`;
+    case 'badge_awarded': {
+      const b = BADGE_LABELS[a.data.badge as BadgeKind];
+      return b ? `${who} a gagné le timbre « ${b.title} »` : `${who} a gagné un timbre`;
+    }
     case 'role_changed':
       return `Les rôles du groupe ont changé`;
     case 'ownership_transferred':
