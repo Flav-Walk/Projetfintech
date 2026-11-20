@@ -84,3 +84,6 @@ secrète ne sert que pour `contribution_settle`, `prepare_account_deletion` et `
 | D7 | Frais de contribution à 0 en simulation, calculés côté serveur | frais calculés par le client |
 | D8 | Un seul bénéficiaire par événement | plusieurs bénéficiaires |
 | D9 | TanStack Query pour cache, reprises et états de chargement | état local par écran |
+| D10 | Rappels par pg_cron dans Supabase (10 min) + déclenchement idempotent à l'ouverture de l'app | cron Render (payant), minuterie dans l'API (le plan gratuit s'endort) |
+| D11 | Discussion : file d'envoi locale avec `client_id` stable, rejouée au retour réseau ; 23505 = déjà reçu | renvoi naïf (doublons) |
+| D12 | Contribution : clé d'idempotence conservée (AsyncStorage) jusqu'à une issue connue | nouvelle clé à chaque appui (risque de double débit) |
