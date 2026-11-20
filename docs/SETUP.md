@@ -6,25 +6,38 @@ Projet : `https://uecptmijcjwmzdebeugk.supabase.co`.
 
 ### Appliquer les migrations
 
-Fichiers à exécuter **dans l'ordre** (`supabase/migrations/`) :
+6 fichiers dans `supabase/migrations/`, dans l'ordre (1 à 5 : schéma ; 6 : rappels, discussion,
+missions). Chaque option enregistre les versions dans `supabase_migrations.schema_migrations`, comme
+`supabase db push`, pour que les outils restent cohérents ensuite.
 
-1. `20261120000100_core.sql`
-2. `20261120000200_gifts_contributions.sql`
-3. `20261120000300_organisation_capsule.sql`
-4. `20261120000400_storage_realtime.sql`
-5. `20261120000500_function_privileges.sql`
+Option A — un seul copier-coller (recommandé) :
+1. `npm run db:bundle` produit `supabase/.bundle/apply.sql` (ignoré par Git ; `npm run db:bundle -- 20261120000600`
+   pour ne prendre que les migrations à partir d'une version).
+2. Supabase > SQL Editor > New query > coller tout le fichier > Run. Une seule transaction : en cas
+   d'erreur, rien n'est appliqué.
 
-Option A — interface : Supabase > SQL Editor > coller chaque fichier > Run.
+Option B — script avec jeton d'accès personnel (supabase.com/dashboard/account/tokens, préfixe `sbp_`) :
+`supabase/.env` (ignoré par Git) contient `SUPABASE_ACCESS_TOKEN=sbp_…`, puis
+`node --env-file=supabase/.env supabase/scripts/apply-remote.mjs` (`--dry-run` pour lister sans appliquer).
+N'applique que les migrations absentes, puis lance les contrôles. Révoquer le jeton après usage.
 
-Option B — CLI (nécessite un jeton d'accès personnel et le mot de passe de la base) :
+Option C — serveur MCP Supabase (déclaré dans `.mcp.json`) : redémarrer Claude Code, `/mcp` > supabase >
+authentification, puis demander l'application des migrations.
 
-```bash
-npx supabase login                       # ouvre le navigateur
-npx supabase link --project-ref uecptmijcjwmzdebeugk
-npx supabase db push                     # applique supabase/migrations
-```
+### Vérification
 
-Vérification : `select count(*) from public.events;` doit répondre 0 sans erreur.
+Coller `supabase/verify.sql` dans le SQL Editor : chaque ligne doit afficher `ok = true` (6 migrations,
+17 tables, RLS partout, trigger profil, buckets privés, politiques Storage, 7 tables Realtime, règlement
+fermé aux clients, aperçu d'invitation ouvert). La dernière requête liste la tâche `complice-reminders`.
+
+### Rappels planifiés (pg_cron)
+
+La migration 6 active `pg_cron` et planifie `run_due_reminders()` toutes les 10 minutes (fin de vote dans
+moins de 24 h, ouverture de capsule). Si la dernière requête de `verify.sql` échoue : Database >
+Extensions > activer `pg_cron`, puis
+`select cron.schedule('complice-reminders', '*/10 * * * *', 'select public.run_due_reminders()');`.
+Sans pg_cron, l'app déclenche aussi `refresh_reminders()` à l'ouverture et au retour au premier plan
+(idempotent) : les rappels arrivent alors à la prochaine ouverture d'un membre.
 
 ### Auth
 
@@ -111,10 +124,50 @@ Les données de démo sont identifiables : `events.is_demo`, `contributions.is_s
 
 ## 5. Render
 
+Service en ligne : `https://complice-api.onrender.com`.
+
 1. Render Dashboard > **New > Blueprint** > dépôt `Flav-Walk/Projetfintech`, branche `main`.
    Render lit `render.yaml` (service `complice-api`, région Francfort, plan gratuit).
 2. Renseigner les variables marquées `sync: false` : `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
 3. Déployer, puis vérifier `https://<service>.onrender.com/health` (`"status":"ok"`, `"admin_configured":true`).
 4. Mettre cette URL dans `EXPO_PUBLIC_API_URL`.
+
+Service créé à la main (hors Blueprint) : complice-api > **Settings > Build & Deploy** :
+- **Branch** : `main` (pas `backend`) ;
+- **Health Check Path** : `/health` ;
+- **Auto-Deploy** : « On Commit ».
+
+Contrôle : après un push sur `main`, `/health` renvoie `"version"` = les 7 premiers caractères du
+commit de `main` (variable `RENDER_GIT_COMMIT`). `/` répond 404 : c'est normal, l'API n'a pas de page d'accueil.
+
+## 6. Premier test sur téléphone (Expo Go)
+
+1. Installer **Expo Go** (Play Store / App Store), version compatible SDK 58.
+2. `mobile/.env` :
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=https://uecptmijcjwmzdebeugk.supabase.co
+   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_…
+   EXPO_PUBLIC_API_URL=https://complice-api.onrender.com
+   ```
+3. Depuis la racine : `npm run mobile`, puis scanner le QR code (Android : Expo Go ; iPhone : appareil photo).
+   Si le téléphone n'est pas sur le même réseau que le PC : `cd mobile && npx expo start --tunnel`.
+4. Ouvrir `https://complice-api.onrender.com/health` dans le navigateur du téléphone une minute avant
+   (réveil du plan gratuit).
+
+Toutes les dépendances sont celles du SDK 58 (`npx expo install --check` : à jour) et fonctionnent dans
+Expo Go ; un development build n'est nécessaire que pour les liens `complice://` et les notifications push.
+
+### Parcours multi-comptes à tester
+
+| # | Compte | Action | Attendu |
+|---|---|---|---|
+| 1 | Organisatrice | créer un événement, Membres > partager un lien participant et un lien bénéficiaire | lien `…/i/<jeton>` |
+| 2 | Participant | Rejoindre > coller le lien, s'inscrire ou se connecter | arrive sur l'événement |
+| 3 | Participant | Idées > proposer (prix, lien, photo), voter, changer de voix | classement à jour chez l'organisatrice sans recharger |
+| 4 | Participant | Participer > 25 € > Confirmer (puis « Tester un refus ») | total collecté mis à jour ; montant visible du seul participant |
+| 5 | Les deux | Missions > « Prendre la mission » sur la même mission | un seul gagne, l'autre voit « Trop tard » |
+| 6 | Participant | Discussion > message ; Capsule > mot + photo > Sceller | compteurs scellés chez l'organisatrice, contenu invisible |
+| 7 | Organisatrice | Réglages > avancer l'ouverture de la capsule (ou attendre la date) | le bénéficiaire voit l'événement et découvre la capsule |
+| 8 | Compte extérieur | ouvrir un lien d'événement ou d'idée | « Événement introuvable » |
 
 Le plan gratuit met le service en veille : la première requête après inactivité peut prendre ~1 min.

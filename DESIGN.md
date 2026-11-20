@@ -61,7 +61,15 @@ réservé aux libellés de bouton en gras ≥ 16 px. Le texte courant sur corail
 - **Carte cagnotte** : fond corail, montant en blanc, jauge blanche, pourcentage en pastille. Pourcentage = arrondi inférieur, borné à 100.
 - **Suivi d'étapes** : 5 pastilles reliées (Groupe, Vote, Achat, Capsule, Jour J). Faite = violet plein + coche ;
   en cours = anneau violet ; à venir = anneau gris. Le compteur « x/5 » compte les étapes faites.
-- **Timbre** : carré dentelé avec pictogramme, couleur pastel. Gagné = couleur, à gagner = gris pointillé avec la condition écrite.
+- **Timbre** (`components/stamps.tsx`) : carré blanc à bord perforé (SVG), panneau pastel et pictogramme
+  linéaire. Gagné = couleur ; à gagner = gris pointillé avec la condition écrite dessous.
+  Couleurs : Idée = jaune, Voix = lavande, Coup de main = menthe, Plume = rose `#FFE1EC`,
+  Complice (participation) = corail clair, seul timbre lié à l'argent. Aucun timbre ne dépend du montant.
+- **Célébration** (`components/celebration.tsx`) : bandeau violet nuit en haut d'écran avec le timbre gagné,
+  250 ms (fondu 150 ms si « Réduire les animations »), annoncé au lecteur d'écran, 3 s puis disparaît.
+  Déclenché par la base (une attribution = une célébration).
+- **Capsule** : écran violet nuit ; mots en Caveat sur carte blanche légèrement inclinée ; avant
+  l'ouverture, seuls des compteurs (mots, photos) sont visibles.
 - **Avatar** : rond 36 px avec bord blanc 2 px, pile avec chevauchement de 10 px, « +n » au-delà de 6.
 - **Mascotte** : cadeau-cœur corail avec nœud jaune et visage. Elle apparaît à l'accueil, dans les états vides et au dévoilement. Jamais dans une erreur.
 

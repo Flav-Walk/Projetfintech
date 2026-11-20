@@ -1,4 +1,4 @@
-import type { EventStatus, MemberRole, VoteVisibility } from '@complice/shared';
+import type { BadgeKind, CapsuleStatus, EventStatus, MemberRole, ProposalStatus, TaskStatus, VoteVisibility } from '@complice/shared';
 
 /** Lignes de tables lues par l'app (alignées sur supabase/migrations). */
 export interface EventRow {
@@ -69,6 +69,87 @@ export interface NotificationRow {
   data: Record<string, unknown>;
   read_at: string | null;
   created_at: string;
+}
+
+export interface ProposalRow {
+  id: string;
+  event_id: string;
+  author_id: string | null;
+  title: string;
+  price_cents: number;
+  previous_price_cents: number | null;
+  price_changed_at: string | null;
+  product_url: string | null;
+  description: string | null;
+  image_path: string | null;
+  status: ProposalStatus;
+  vote_count: number;
+  created_at: string;
+  profiles: Pick<Profile, 'display_name'> | null;
+}
+
+export interface RankingRow {
+  proposal_id: string;
+  vote_count: number;
+  rank: number;
+  tied: boolean;
+}
+
+export interface ReactionRow {
+  proposal_id: string;
+  user_id: string;
+  emoji: string;
+}
+
+export interface CommentRow {
+  id: string;
+  proposal_id: string;
+  author_id: string | null;
+  body: string;
+  created_at: string;
+  profiles: Pick<Profile, 'display_name'> | null;
+}
+
+export interface TaskRow {
+  id: string;
+  event_id: string;
+  title: string;
+  kind: 'order' | 'pickup' | 'wrap' | 'card' | 'handover' | 'custom';
+  due_at: string | null;
+  assignee_id: string | null;
+  status: TaskStatus;
+  position: number;
+  completed_at: string | null;
+  assignee: Pick<Profile, 'display_name'> | null;
+}
+
+export interface MessageRow {
+  id: string;
+  event_id: string;
+  author_id: string | null;
+  body: string;
+  client_id: string | null;
+  created_at: string;
+  profiles: Pick<Profile, 'display_name'> | null;
+}
+
+export interface CapsuleEntryRow {
+  id: string;
+  event_id: string;
+  author_id: string;
+  body: string | null;
+  photo_path: string | null;
+  status: CapsuleStatus;
+  published_at: string | null;
+  updated_at: string;
+  profiles: Pick<Profile, 'display_name'> | null;
+}
+
+export interface BadgeRow {
+  event_id: string;
+  user_id: string;
+  badge: BadgeKind;
+  awarded_at: string;
 }
 
 export interface NotificationPrefs {

@@ -1,6 +1,7 @@
 import type { EventFunding, EventProgress, InvitationPreview, InvitationStatus, MemberRole, VoteVisibility } from '@complice/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from './auth';
 import { supabase, unwrap } from './supabase';
 import type { ActivityRow, EventRow, InvitationRow, MemberRow, NotificationPrefs, NotificationRow, Profile } from './types';
@@ -323,6 +324,29 @@ export function useNotifications() {
         await supabase.from('notifications').select('id, event_id, kind, data, read_at, created_at').order('created_at', { ascending: false }).limit(50),
       ) as NotificationRow[],
   });
+}
+
+/**
+ * Rappels dus (fin de vote, ouverture de capsule) pour mes événements. Filet de sécurité
+ * si le planificateur pg_cron n'est pas actif : idempotent côté base (dedupe_key).
+ */
+export function useRefreshReminders() {
+  const { session } = useAuth();
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!session) return;
+    let alive = true;
+    const run = () =>
+      supabase.rpc('refresh_reminders').then(({ data }) => {
+        if (alive && typeof data === 'number' && data > 0) qc.invalidateQueries({ queryKey: qk.notifications });
+      });
+    void run();
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && void run());
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, [session, qc]);
 }
 
 export function useMarkNotificationsRead() {

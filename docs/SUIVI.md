@@ -4,9 +4,38 @@
 |---|---|---|
 | 1 | Monorepo, branches, analyse de la planche (`DESIGN.md`), contrats, migrations complètes | **fait** |
 | 2 | Comptes, création d'événement, invitations, accueil d'événement, membres, réglages, profil | **fait côté code**, non vérifié contre Supabase (migrations à appliquer) |
-| 3 | Propositions et votes (écrans), contributions simulées (écrans) | base + API prêtes et testées ; écrans à faire |
-| 4 | Missions, discussion, capsule, gamification (écrans) | base prête et testée ; écrans à faire |
-| 5 | Revue sécurité/accessibilité, tests sur téléphone, Render, Graphify, Floorplan | à faire |
+| 3 | Propositions et votes, contributions simulées | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
+| 4 | Missions, discussion, capsule, timbres, rappels | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
+| 5 | Vérification distante multi-comptes, téléphone, revue sécurité/accessibilité | **bloqué** : migrations non appliquées à distance |
+
+## Lots 3-4 — 2026-11-20
+
+### Réalisé
+- Migration 6 : rappels `vote_closing` / `capsule_open` (pg_cron toutes les 10 min + déclenchement
+  par l'app), notification « message » (une par heure et par événement), `create_task`, chemin des
+  images de proposition imposé, proposition retirée définitive, `can_view_event` sans NULL.
+- Écrans : Idées (classement temps réel, réactions, commentaires, égalité, indisponible, prix modifié,
+  choix confirmé), formulaire d'idée (lien, photo privée), Participer (montants, validation, récap,
+  simulation explicite, échec et nouvelle tentative, reprise idempotente, historique), Missions
+  (prise concurrente, terminer, libérer, (ré)attribuer, rouvrir, créer avec échéance), Discussion
+  (pagination, temps réel, file d'envoi sans doublon, reprise), Capsule (brouillon, photo, aperçu,
+  scellement, dévoilement, souvenirs), timbres et célébration, notifications par type.
+- Outillage : `npm run db:bundle`, `supabase/verify.sql`, `supabase/scripts/apply-remote.mjs`,
+  serveur MCP Supabase déclaré dans `.mcp.json`.
+
+### Vérifié (exécuté)
+- `npm test` : SQL **35/35** (dont un parcours complet idée → vote → contribution → mission → message
+  → capsule → dévoilement, accès d'un extérieur refusé, rappels idempotents), shared **5/5**, backend **8/8**.
+- Typage mobile OK, ESLint 0 problème, export web Expo réussi, `npx expo install --check` à jour.
+- Fichier regroupé + `verify.sql` exécutés sur une base vierge (PGlite) : 9 contrôles OK.
+- `https://complice-api.onrender.com/health` : 200, `admin_configured: true`, version `a640951`.
+
+### Non vérifié / limites
+- Aucune table sur le Supabase distant : écrans non testés contre de vraies données, ni sur téléphone.
+- Render sert `a640951` et déployait depuis `backend` : branche à passer sur `main`.
+- Paiement simulé uniquement ; frais à 0 €.
+- Notifications push non implémentées (development build + clés FCM/APNs nécessaires).
+- Réactions et commentaires des idées : actualisés au retour sur l'écran (non publiés en Realtime).
 
 ## Lots 1-2 — 2026-11-20
 
