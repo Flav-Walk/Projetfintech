@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.expo/
+web-build/
+*.log
+.DS_Store
+
+# Secrets et configuration locale
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+*.p12
+*.key
+*.jks
+*.mobileprovision
+
+# Outillage local
+.claude/settings.local.json
+graphify-out/cache/
+coverage/
