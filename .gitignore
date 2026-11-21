@@ -23,5 +23,7 @@ graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/manifest.json
 graphify-out/cost.json
+graphify-out/20*/
+graphify-out/*.sig
 coverage/
 supabase/.bundle/
