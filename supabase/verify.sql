@@ -42,13 +42,17 @@ select 'règlement de contribution fermé aux clients',
 union all
 select 'privilèges de tables (migration 7)',
        case when has_table_privilege('authenticated', 'public.events', 'select')
-             and has_table_privilege('authenticated', 'public.proposals', 'insert')
+             and has_any_column_privilege('authenticated', 'public.proposals', 'insert')
+             and not has_table_privilege('authenticated', 'public.tasks', 'insert')
+             and not has_column_privilege('authenticated', 'public.messages', 'created_at', 'insert')
              and has_table_privilege('service_role', 'public.events', 'update')
              and not has_table_privilege('authenticated', 'public.events', 'truncate')
              and not has_table_privilege('anon', 'public.events', 'select')
             then 'conformes' else 'ANOMALIE : appliquer 20261121000700_table_privileges' end,
        has_table_privilege('authenticated', 'public.events', 'select')
-         and has_table_privilege('authenticated', 'public.proposals', 'insert')
+         and has_any_column_privilege('authenticated', 'public.proposals', 'insert')
+         and not has_table_privilege('authenticated', 'public.tasks', 'insert')
+         and not has_column_privilege('authenticated', 'public.messages', 'created_at', 'insert')
          and has_table_privilege('service_role', 'public.events', 'update')
          and not has_table_privilege('authenticated', 'public.events', 'truncate')
          and not has_table_privilege('anon', 'public.events', 'select')
