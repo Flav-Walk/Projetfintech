@@ -1,6 +1,10 @@
 /** Messages Auth en français, sans révéler si un compte existe. */
-export function authErrorMessage(err: { message?: string; status?: number } | null): string {
+export function authErrorMessage(err: { message?: string; status?: number; code?: string } | null): string {
   const m = err?.message ?? '';
+  const code = err?.code ?? '';
+  if (code === 'email_address_invalid' || /email address .* is invalid/i.test(m)) return 'Cette adresse e-mail n’est pas acceptée. Vérifie-la ou utilise une autre adresse.';
+  if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit') return 'Trop de demandes pour cette adresse. Patiente quelques minutes avant de réessayer.';
+  if (code === 'weak_password') return 'Mot de passe trop faible : 8 caractères minimum, avec lettres et chiffres.';
   if (/invalid login credentials/i.test(m)) return 'E-mail ou mot de passe incorrect.';
   if (/email not confirmed/i.test(m)) return 'Confirme d’abord ton adresse e-mail (lien ou code reçu par e-mail).';
   if (/password should be at least|weak password/i.test(m)) return 'Mot de passe trop faible : 8 caractères minimum, avec lettres et chiffres.';
