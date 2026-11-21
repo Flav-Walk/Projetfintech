@@ -15,9 +15,19 @@ import { colors, radius, space } from '@/theme/tokens';
 
 const OCCASIONS = ['anniversaire', 'départ', 'naissance', 'mariage', 'pot de thèse', 'remerciement', 'autre'];
 
-function defaultGiftDate() {
+/**
+ * Modèles : des valeurs de départ raisonnables, toutes modifiables. Ils ne recopient jamais le contenu
+ * d'un ancien événement (membres, messages, photos, participations).
+ */
+const TEMPLATES: { key: string; label: string; occasion: string; days: number; target: string; hint: string }[] = [
+  { key: 'birthday', label: 'Anniversaire', occasion: 'anniversaire', days: 14, target: '150', hint: 'Cadeau dans 2 semaines, vote 5 jours avant.' },
+  { key: 'leaving', label: 'Départ d’un·e collègue', occasion: 'départ', days: 10, target: '120', hint: 'Carte signée par l’équipe et pot de départ inclus dans les missions.' },
+  { key: 'birth', label: 'Naissance', occasion: 'naissance', days: 21, target: '150', hint: 'Trois semaines pour s’organiser avec les parents.' },
+];
+
+function defaultGiftDate(days = 14) {
   const d = new Date();
-  d.setDate(d.getDate() + 14);
+  d.setDate(d.getDate() + days);
   d.setHours(19, 0, 0, 0);
   return d;
 }
@@ -46,6 +56,18 @@ export default function CreateEvent() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [template, setTemplate] = useState<string | null>(null);
+
+  function applyTemplate(t: (typeof TEMPLATES)[number]) {
+    setTemplate(t.key);
+    setOccasion(t.occasion);
+    if (!target) setTarget(t.target);
+    const gift = defaultGiftDate(t.days);
+    setGiftAt(gift);
+    setRevealAt(gift);
+    setVotesAt(shift(gift, -5));
+    setContribAt(shift(gift, -2));
+  }
 
   const suggestedTitle = beneficiary.trim() ? `${occasion === 'anniversaire' ? 'L’anniversaire' : `Cadeau ${occasion}`} de ${beneficiary.trim()}` : '';
   const finalTitle = (title.trim() || suggestedTitle).slice(0, 80);
@@ -63,6 +85,7 @@ export default function CreateEvent() {
     }
     if (s === 2) {
       const now = Date.now();
+      if (giftAt.getTime() <= now) e.gift = 'La remise du cadeau doit être dans le futur.';
       if (revealAt.getTime() <= now) e.reveal = 'L’ouverture doit être dans le futur.';
       if (votesAt.getTime() <= now) e.votes = 'La fin du vote doit être dans le futur.';
       if (votesAt > revealAt) e.votes = 'Le vote doit se terminer avant l’ouverture de la capsule.';
@@ -132,6 +155,26 @@ export default function CreateEvent() {
 
       {step === 0 ? (
         <>
+          <View style={{ gap: 6 }}>
+            <T v="label">Partir d’un modèle (facultatif)</T>
+            <Row style={{ flexWrap: 'wrap' }} gap={space.sm}>
+              {TEMPLATES.map((t) => (
+                <Pressable
+                  key={t.key}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: template === t.key }}
+                  accessibilityHint={t.hint}
+                  onPress={() => applyTemplate(t)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: template === t.key ? colors.coral : colors.border, backgroundColor: template === t.key ? colors.coralSoft : colors.surface }}
+                >
+                  <T v="label" color={template === t.key ? colors.coralDark : colors.ink}>
+                    {t.label}
+                  </T>
+                </Pressable>
+              ))}
+            </Row>
+            {template ? <T v="small" color={colors.inkSoft}>{TEMPLATES.find((t) => t.key === template)!.hint} Tout reste modifiable.</T> : null}
+          </View>
           <Field label="Prénom de la personne fêtée" value={beneficiary} onChangeText={setBeneficiary} placeholder="Camille" maxLength={60} error={errors.beneficiary} autoCapitalize="words" />
           <View style={{ gap: 6 }}>
             <T v="label">Occasion</T>
@@ -189,14 +232,14 @@ export default function CreateEvent() {
             </T>
           </Card>
           <Banner tone="info" title="Confidentialité des montants">
-            Le groupe voit le total et le nombre de participations. Chaque montant individuel n’est visible que par la personne qui l’a donné.
+            Chacun voit seulement son propre montant. Le groupe suit la cagnotte par paliers (un quart, la moitié…). Le total exact n’apparaît qu’aux organisateurs, une fois les participations closes, pour acheter le cadeau. La personne fêtée ne voit aucun montant.
           </Banner>
         </>
       ) : null}
 
       {step === 2 ? (
         <>
-          <DateField label="Remise du cadeau" value={giftAt} onChange={setGiftAt} minimumDate={new Date()} />
+          <DateField label="Remise du cadeau" value={giftAt} onChange={setGiftAt} minimumDate={new Date()} error={errors.gift} />
           <DateField label="Fin du vote" value={votesAt} onChange={setVotesAt} minimumDate={new Date()} error={errors.votes} hint="Après cette date, plus de vote ni de nouvelle idée." />
           <DateField label="Fin des participations" value={contribAt} onChange={setContribAt} minimumDate={new Date()} error={errors.contrib} />
           <DateField label="Ouverture de la capsule" value={revealAt} onChange={setRevealAt} minimumDate={new Date()} error={errors.reveal} hint="La personne fêtée découvre les mots, les photos et le cadeau à cette date." />

@@ -1,5 +1,5 @@
 import { messageFor } from '@complice/shared';
-import { CalendarClock, Check, CircleDashed, Hand, Plus, RotateCcw, UserRoundCog, X } from 'lucide-react-native';
+import { CalendarClock, Check, CircleDashed, Hand, Pencil, Plus, RotateCcw, UserRoundCog, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +11,7 @@ import { Banner, Button, Card, Chip, Field, ProgressBar, Row, T } from '@/compon
 import { useAuth } from '@/lib/auth';
 import { formatEventDate } from '@/lib/format';
 import { useEvent, useMembers, useProgress } from '@/lib/queries';
-import { useAssignTask, useClaimTask, useCompleteTask, useCreateTask, useDeleteTask, useReleaseTask, useTasks } from '@/lib/tasks';
+import { useAssignTask, useClaimTask, useCompleteTask, useCreateTask, useDeleteTask, useReleaseTask, useTasks, useUpdateTask } from '@/lib/tasks';
 import type { MemberRow, TaskRow } from '@/lib/types';
 import { useEventId } from '@/lib/use-event-context';
 import { useNow } from '@/lib/use-now';
@@ -34,6 +34,7 @@ export default function Missions() {
   const [notice, setNotice] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<TaskRow | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<TaskRow | null>(null);
 
   if (event.isPending || progress.isPending || tasks.isPending) return <Loading />;
   if (!event.data || !progress.data || tasks.isError) {
@@ -151,6 +152,9 @@ export default function Missions() {
                   {isManager && t.status === 'done' ? (
                     <Button compact variant="ghost" label="Rouvrir" icon={<RotateCcw size={16} color={colors.ink} />} onPress={() => release.mutate(t.id)} />
                   ) : null}
+                  {isManager && t.status !== 'done' ? (
+                    <Button compact variant="ghost" label="Modifier" icon={<Pencil size={16} color={colors.ink} />} onPress={() => setEditing(t)} />
+                  ) : null}
                   {isManager && t.kind === 'custom' && t.status !== 'done' ? (
                     <ConfirmButton variant="outline" label="Supprimer" confirmLabel="Confirmer" onConfirm={() => remove.mutate(t.id)} />
                   ) : null}
@@ -172,7 +176,46 @@ export default function Missions() {
         }}
       />
       <CreateTask eventId={id} visible={creating} members={preparers} onClose={() => setCreating(false)} />
+      <EditTask eventId={id} task={editing} onClose={() => setEditing(null)} />
     </SafeAreaView>
+  );
+}
+
+function EditTask({ eventId, task, onClose }: { eventId: string; task: TaskRow | null; onClose: () => void }) {
+  const update = useUpdateTask(eventId);
+  const [title, setTitle] = useState('');
+  const [due, setDue] = useState<Date | null>(null);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  if (task && loadedFor !== task.id) {
+    setLoadedFor(task.id);
+    setTitle(task.title);
+    setDue(task.due_at ? new Date(task.due_at) : null);
+  }
+  const titleError = title.trim().length < 2 ? 'Donne un titre (2 caractères minimum).' : null;
+  const close = () => {
+    setLoadedFor(null);
+    update.reset();
+    onClose();
+  };
+  return (
+    <Sheet visible={!!task} title="Modifier la mission" onClose={close}>
+      <Field label="Titre" value={title} onChangeText={setTitle} maxLength={80} error={title ? titleError : null} />
+      {due ? (
+        <View style={{ gap: space.sm }}>
+          <DateField label="Échéance" value={due} onChange={setDue} minimumDate={new Date()} />
+          <Button compact variant="ghost" label="Sans échéance" onPress={() => setDue(null)} />
+        </View>
+      ) : (
+        <Button compact variant="outline" label="Ajouter une échéance" icon={<CalendarClock size={16} color={colors.ink} />} onPress={() => setDue(new Date(Date.now() + 3 * 86400000))} />
+      )}
+      {update.isError ? <Banner tone="error">{messageFor(update.error)}</Banner> : null}
+      <Button
+        label="Enregistrer"
+        loading={update.isPending}
+        disabled={!!titleError}
+        onPress={() => task && update.mutate({ taskId: task.id, title: title.trim(), dueAt: due }, { onSuccess: close })}
+      />
+    </Sheet>
   );
 }
 

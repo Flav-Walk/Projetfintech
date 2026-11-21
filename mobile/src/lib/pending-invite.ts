@@ -14,6 +14,15 @@ export async function savePendingInvite(token: string) {
   }
 }
 
+/** Lecture sans effacement (pour l'ajouter au lien de confirmation). */
+export async function peekPendingInvite(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(KEY);
+  } catch {
+    return null;
+  }
+}
+
 export async function takePendingInvite(): Promise<string | null> {
   try {
     const token = await AsyncStorage.getItem(KEY);

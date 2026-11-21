@@ -1,8 +1,8 @@
 import { formatCents, messageFor } from '@complice/shared';
 import { router } from 'expo-router';
 import { Lightbulb, Plus, Scale } from 'lucide-react-native';
-import { useMemo } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProposalCard } from '@/components/idea-parts';
 import { PrivateImage } from '@/components/private-image';
@@ -12,9 +12,20 @@ import { useAuth } from '@/lib/auth';
 import { formatEventDate, timeUntil } from '@/lib/format';
 import { useCastVote, useIdeasRealtime, useMyVote, useProposals, useRanking, useReactions, useToggleReaction } from '@/lib/ideas';
 import { useEvent, useProgress, useRevealedGift } from '@/lib/queries';
+import type { ProposalRow } from '@/lib/types';
 import { useEventId } from '@/lib/use-event-context';
 import { useNow } from '@/lib/use-now';
 import { colors, gutter, space } from '@/theme/tokens';
+
+type ViewMode = 'discover' | 'ranking' | 'recent' | 'mine';
+const MODE_LABELS: Record<ViewMode, string> = { discover: 'À découvrir', ranking: 'Classement', recent: 'Dernières', mine: 'Mes idées' };
+
+/** Ordre neutre et stable : dépend du membre et de l'idée, jamais des voix. */
+function neutralOrder(me: string | undefined, id: string): number {
+  let h = 2166136261;
+  for (const c of `${me ?? ''}:${id}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return h >>> 0;
+}
 
 export default function Ideas() {
   const id = useEventId();
@@ -32,6 +43,7 @@ export default function Ideas() {
   const reactions = useReactions(id, visible.map((p) => p.id));
   const vote = useCastVote(id);
   const react = useToggleReaction(id);
+  const [viewMode, setViewMode] = useState<ViewMode | null>(null);
   // Bénéficiaire : le cadeau retenu sans prix ni lien (les idées et leurs prix lui sont fermées).
   const gift = useRevealedGift(id, isBeneficiary);
 
@@ -49,12 +61,22 @@ export default function Ideas() {
   const isManager = p.my_role === 'organizer' || p.my_role === 'co_organizer';
   const votesOpen = p.votes_open && !e.selected_proposal_id;
   const rankMap = new Map((ranking.data ?? []).map((r) => [r.proposal_id, r]));
-  const sorted = [...visible].sort((a, b) => {
-    if (a.id === e.selected_proposal_id) return -1;
-    if (b.id === e.selected_proposal_id) return 1;
-    if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+  // Tant que je n'ai pas voté, les idées sont présentées dans un ordre neutre (propre à chaque membre,
+  // stable) pour qu'elles soient découvertes avant d'être comparées. Les nombres de voix restent réels.
+  const mode: ViewMode = viewMode ?? (votesOpen && !myVote.data ? 'discover' : 'ranking');
+  const byMode = (a: ProposalRow, b: ProposalRow) => {
+    if (mode === 'recent' || mode === 'mine') return b.created_at.localeCompare(a.created_at);
+    if (mode === 'discover') return neutralOrder(me, a.id) - neutralOrder(me, b.id);
     return b.vote_count - a.vote_count || a.created_at.localeCompare(b.created_at);
-  });
+  };
+  const sorted = [...visible]
+    .filter((x) => mode !== 'mine' || x.author_id === me)
+    .sort((a, b) => {
+      if (a.id === e.selected_proposal_id) return -1;
+      if (b.id === e.selected_proposal_id) return 1;
+      if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+      return byMode(a, b);
+    });
   const totalVotes = visible.filter((x) => x.status === 'active').reduce((s, x) => s + x.vote_count, 0);
   const topTied = (ranking.data ?? []).some((r) => r.rank === 1 && r.tied);
   const mine = visible.find((x) => x.id === myVote.data);
@@ -163,11 +185,40 @@ export default function Ideas() {
           />
         ) : null}
 
+        {visible.length > 1 ? (
+          <View style={{ gap: 6 }}>
+            <Row gap={space.sm} style={{ flexWrap: 'wrap' }}>
+              {(Object.keys(MODE_LABELS) as ViewMode[]).map((m) => (
+                <Pressable
+                  key={m}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: mode === m }}
+                  onPress={() => setViewMode(m)}
+                  style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1.5, borderColor: mode === m ? colors.violet : colors.border, backgroundColor: mode === m ? colors.lavender : colors.surface }}
+                >
+                  <T v="label" color={mode === m ? colors.violetDark : colors.ink}>
+                    {MODE_LABELS[m]}
+                  </T>
+                </Pressable>
+              ))}
+            </Row>
+            {mode === 'discover' ? (
+              <T v="small" color={colors.inkSoft}>
+                Ordre mélangé pour découvrir chaque idée avant de voter. Le classement reste consultable à tout moment.
+              </T>
+            ) : null}
+          </View>
+        ) : null}
+
         {sorted.length === 0 ? (
-          <EmptyState
-            title="Aucune idée pour l’instant"
-            text={`Propose la première idée pour ${e.beneficiary_name} : un nom, un prix, un lien si tu en as un.`}
-          />
+          mode === 'mine' ? (
+            <EmptyState title="Tu n’as pas encore proposé d’idée" text="Une idée suffit : un nom, un prix, un lien si tu en as un." />
+          ) : (
+            <EmptyState
+              title="Aucune idée pour l’instant"
+              text={`Propose la première idée pour ${e.beneficiary_name} : un nom, un prix, un lien si tu en as un.`}
+            />
+          )
         ) : (
           sorted.map((x) => {
             const r = rankMap.get(x.id);
@@ -175,7 +226,7 @@ export default function Ideas() {
               <ProposalCard
                 key={x.id}
                 p={x}
-                rank={r?.rank ?? null}
+                rank={mode === 'ranking' ? (r?.rank ?? null) : null}
                 tied={r?.tied ?? false}
                 totalVotes={totalVotes}
                 isMyVote={myVote.data === x.id}

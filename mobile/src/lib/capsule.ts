@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './auth';
 import { qk } from './queries';
 import { supabase, unwrap } from './supabase';
-import type { BadgeRow, CapsuleEntryRow } from './types';
+import type { BadgeRow, CapsuleEntryRow, ThanksRow } from './types';
 
 export const capsuleKeys = {
   mine: (id: string) => ['event', id, 'capsule', 'mine'] as const,
@@ -80,6 +80,32 @@ export function useDeleteEntry(eventId: string) {
       qc.invalidateQueries({ queryKey: capsuleKeys.stats(eventId) });
       qc.invalidateQueries({ queryKey: qk.progress(eventId) });
     },
+  });
+}
+
+/** Remerciements du bénéficiaire (un message par événement, après l'ouverture ; lu par le groupe). */
+export function useThanks(eventId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['event', eventId, 'thanks'],
+    enabled,
+    queryFn: async () =>
+      (unwrap(await supabase.from('event_thanks').select('event_id, author_id, body, created_at, updated_at').eq('event_id', eventId).maybeSingle()) as ThanksRow | null) ?? null,
+  });
+}
+
+export function useSaveThanks(eventId: string) {
+  const qc = useQueryClient();
+  const { session } = useAuth();
+  return useMutation({
+    mutationFn: async (v: { body: string; exists: boolean }) => {
+      if (v.exists) {
+        const rows = unwrap(await supabase.from('event_thanks').update({ body: v.body }).eq('event_id', eventId).select('event_id'));
+        if (!rows || rows.length === 0) throw new Error('forbidden');
+      } else {
+        unwrap(await supabase.from('event_thanks').insert({ event_id: eventId, author_id: session!.user.id, body: v.body }));
+      }
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['event', eventId, 'thanks'] }),
   });
 }
 

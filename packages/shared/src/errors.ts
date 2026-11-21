@@ -32,6 +32,8 @@ export const ERROR_MESSAGES = {
   proposal_withdrawn: 'Cette idée a été retirée : propose-la de nouveau si besoin.',
   api_not_configured: 'Le serveur de paiement n’est pas configuré dans l’app (EXPO_PUBLIC_API_URL).',
   rate_limited: 'Trop de demandes d’un coup. Patiente une minute.',
+  invalid_email: 'Adresse e-mail invalide.',
+  email_not_configured: 'L’envoi d’e-mails n’est pas encore activé : partage plutôt le lien.',
   invalid_request: 'Demande invalide.',
   network: 'Connexion impossible. Vérifie ton réseau et réessaie.',
   service_unavailable: 'Le service Complice n’est pas encore prêt (base de données à initialiser). Réessaie plus tard.',

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Loading } from '@/components/states';
 import { Banner, Button, Screen, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { extractInviteToken, savePendingInvite } from '@/lib/pending-invite';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -10,7 +11,7 @@ import { supabase } from '@/lib/supabase';
  * URL à autoriser dans Supabase > Authentication > URL Configuration (voir docs/SETUP.md).
  */
 export default function AuthCallback() {
-  const params = useLocalSearchParams<{ code?: string; error_description?: string; type?: string }>();
+  const params = useLocalSearchParams<{ code?: string; error_description?: string; type?: string; invite?: string }>();
   const { setRecovering } = useAuth();
   const [exchangeError, setError] = useState<string | null>(null);
   const error =
@@ -20,10 +21,20 @@ export default function AuthCallback() {
     if (!params.code) return;
     let cancelled = false;
     (async () => {
+      // Invitation portée par le lien de confirmation : prioritaire sur le stockage local.
+      const invite = extractInviteToken(params.invite ?? '');
+      if (invite) await savePendingInvite(invite);
       const { data, error: err } = await supabase.auth.exchangeCodeForSession(params.code!);
       if (cancelled) return;
       if (err || !data.session) {
-        setError('Ce lien a expiré ou a déjà été utilisé. Demande un nouvel e-mail, ou saisis le code reçu.');
+        // Lien déjà utilisé alors que l'adresse est confirmée : une session existe peut-être déjà.
+        const { data: current } = await supabase.auth.getSession();
+        if (current.session) return router.replace('/after-auth');
+        setError(
+          /network|fetch/i.test(err?.message ?? '')
+            ? 'Connexion impossible. Vérifie ton réseau, puis rouvre le lien.'
+            : 'Ce lien a expiré ou a déjà servi. Connecte-toi si tu as déjà confirmé, ou demande un nouvel e-mail depuis l’écran de connexion.',
+        );
         return;
       }
       // Le type n'est pas toujours transmis : l'événement PASSWORD_RECOVERY de l'AuthProvider couvre l'autre cas.
@@ -37,7 +48,7 @@ export default function AuthCallback() {
     return () => {
       cancelled = true;
     };
-  }, [params.code, params.error_description, params.type, setRecovering]);
+  }, [params.code, params.error_description, params.type, params.invite, setRecovering]);
 
   if (!error) return <Loading label="Connexion en cours…" />;
   return (

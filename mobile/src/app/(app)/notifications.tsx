@@ -28,6 +28,8 @@ function label(n: NotificationRow): string {
       return 'Quelqu’un a rejoint le groupe';
     case 'message':
       return 'Nouveaux messages dans la discussion';
+    case 'thanks':
+      return `La personne fêtée a laissé un mot pour le groupe${title}`;
     default:
       return 'Du nouveau dans ton groupe';
   }
@@ -42,6 +44,7 @@ function target(n: NotificationRow): string {
     case 'task_assigned':
       return 'missions';
     case 'capsule_open':
+    case 'thanks':
       return 'capsule';
     case 'message':
       return 'chat';

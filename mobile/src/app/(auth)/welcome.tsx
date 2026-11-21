@@ -2,12 +2,19 @@ import { router } from 'expo-router';
 import { Link2 } from 'lucide-react-native';
 import { View } from 'react-native';
 import { Mascot } from '@/components/mascot';
-import { Button, Screen, T } from '@/components/ui';
+import { Banner, Button, Screen, T } from '@/components/ui';
+import { useAuth } from '@/lib/auth';
 import { colors, space } from '@/theme/tokens';
 
 export default function Welcome() {
+  const { sessionExpired, clearSessionExpired } = useAuth();
   return (
     <Screen contentStyle={{ flexGrow: 1, justifyContent: 'space-between' }}>
+      {sessionExpired ? (
+        <Banner tone="info" title="Ta session a pris fin">
+          Reconnecte-toi pour retrouver tes groupes : rien n’a été perdu.
+        </Banner>
+      ) : null}
       <View style={{ alignItems: 'center', gap: space.sm, marginTop: space.xl }}>
         <T v="display" style={{ fontSize: 46, lineHeight: 50 }} accessibilityRole="header">
           complice
@@ -24,7 +31,14 @@ export default function Welcome() {
           Cagnotte, idées, votes, missions et une capsule de mots pour la personne fêtée.
         </T>
         <Button label="Créer un compte" onPress={() => router.push('/sign-up')} />
-        <Button label="Se connecter" variant="outline" onPress={() => router.push('/sign-in')} />
+        <Button
+          label="Se connecter"
+          variant="outline"
+          onPress={() => {
+            clearSessionExpired();
+            router.push('/sign-in');
+          }}
+        />
         <Button
           label="J’ai un lien d’invitation"
           variant="ghost"
