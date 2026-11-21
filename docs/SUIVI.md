@@ -1,5 +1,13 @@
 # Suivi des lots
 
+## Cause de l'échec d'inscription (2026-11-21, 19:10)
+
+Logs Auth : `525 5.7.1 Unauthorized IP address` sur chaque `/signup`. La restriction d'IP du compte
+Brevo bloque le SMTP de Supabase (et menace l'API depuis Render). À lever dans Brevo > Sécurité.
+Migration 10 vérifiée (registre 10, `verify.sql` 13/13) ; Render sert `3041d88`.
+Cagnotte de test ouverte : « Pot de départ de Sam (essai) » (votes jusqu'au 26/11, participations
+jusqu'au 29/11), lien participant créé (3 usages, expire le 28/11). Détail : [AUTH-DIAGNOSTIC.md](AUTH-DIAGNOSTIC.md).
+
 ## Reprise Codex — Auth (2026-11-21)
 
 **Inscription encore bloquée côté envoi de confirmation.** Une seule tentative normale autorisée,

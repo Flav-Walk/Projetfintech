@@ -21,7 +21,25 @@ Le diagnostic brut et les paramètres du test sont conservés uniquement dans
 `supabase/.bundle/auth-diagnostic/` (ignoré par Git ; contient un mot de passe généré, ne pas partager).
 Il ne s'agit pas d'une validation du parcours utilisateur et aucun e-mail reçu n'est confirmé.
 
-## Vérifications distantes en lecture seule
+## Cause établie (Logs > Auth, lus le 21/11 à 19:10)
+
+Les quatre inscriptions de 17:38 à 17:50 UTC portent la même erreur SMTP :
+`525 "5.7.1 Unauthorized IP address"`. Brevo refuse la connexion SMTP venant des serveurs de
+Supabase parce que la **restriction d'adresses IP** (Brevo > Sécurité > IP autorisées) est active.
+Ce n'est ni la clé SMTP, ni l'expéditeur, ni un trigger : l'authentification n'est même pas atteinte.
+Le 401 « IP non autorisée » de l'API Brevo depuis ce poste a la même origine ; il menace aussi
+l'envoi des e-mails métier depuis Render, dont les IP sortantes changent.
+
+Correction (côté Brevo, par le titulaire du compte) : désactiver le blocage des IP inconnues,
+car les IP sortantes de Supabase Auth et de Render ne sont pas fixes. Les inscriptions ratées
+n'ont laissé aucun compte dans `auth.users` (vérifié en lecture seule) : on peut réessayer
+avec la même adresse.
+
+État vérifié en lecture seule à 19:10 : registre des migrations = 10 entrées 2026,
+13/13 contrôles de `supabase/verify.sql` à `true`, tâches `complice-reminders` et
+`complice-email-outbox` actives, `email_outbox` vide ; Render `/health` = `3041d88`, e-mails configurés.
+
+## Vérifications distantes en lecture seule (avant la lecture des logs)
 
 - `/auth/v1/settings` : `disable_signup=false`, fournisseur e-mail actif,
   `mailer_autoconfirm=false` ; confirmation obligatoire conservée.
