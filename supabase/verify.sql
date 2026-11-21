@@ -2,7 +2,7 @@
 -- Chaque ligne doit afficher ok = true.
 select 'migrations enregistrées' as controle,
        (select count(*) from supabase_migrations.schema_migrations where version like '2026%')::text as valeur,
-       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 8 as ok
+       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 9 as ok
 union all
 select 'tables COMPLICE présentes',
        count(*)::text,
@@ -65,6 +65,12 @@ select 'montants hors de events, illisibles par les clients (migration 8)',
        not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'events' and column_name like '%cents')
          and not has_any_column_privilege('authenticated', 'public.event_finances', 'select')
          and not has_function_privilege('authenticated', 'public.event_contributors(uuid)', 'execute')
+union all
+select 'aucune annonce nominative de contribution (migrations 8 et 9)',
+       (select count(*) from public.activity where (kind = 'contribution_confirmed' and actor_id is not null)
+          or (kind = 'badge_awarded' and data->>'badge' = 'contributor'))::text,
+       not exists (select 1 from public.activity where (kind = 'contribution_confirmed' and actor_id is not null)
+          or (kind = 'badge_awarded' and data->>'badge' = 'contributor'))
 union all
 select 'aperçu d''invitation ouvert aux visiteurs',
        case when has_function_privilege('anon', 'public.preview_invitation(text)', 'execute') then 'ouvert' else 'fermé' end,

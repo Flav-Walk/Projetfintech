@@ -300,6 +300,9 @@ test('contributions : idempotence, confirmation par le service uniquement, total
   assert.match(await errorOf(as(db, lea, `select user_id from public.event_contributors($1)`, [ev])), /permission denied/);
   const named = await as(db, lea, `select count(*)::int as n from public.activity where event_id = $1 and kind = 'contribution_confirmed' and actor_id is not null`, [ev]);
   assert.equal(named.rows[0].n, 0);
+  // Le timbre « Complice » ne doit pas non plus apparaître dans le fil (il nommerait le contributeur).
+  const badgeAct = await as(db, lea, `select count(*)::int as n from public.activity where event_id = $1 and kind = 'badge_awarded' and data->>'badge' = 'contributor'`, [ev]);
+  assert.equal(badgeAct.rows[0].n, 0, 'aucune annonce du timbre « Complice »');
   const badges = await as(db, lea, `select user_id from public.user_badges where event_id = $1 and badge = 'contributor'`, [ev]);
   assert.deepEqual(badges.rows.map((r) => r.user_id), [lea], 'timbre « Complice » des autres invisible');
 
