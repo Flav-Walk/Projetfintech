@@ -45,8 +45,9 @@ test('parcours : idée, vote, contribution, mission, message, capsule, puis dév
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_1')`, [c1.rows[0].id]);
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_1')`, [c1.rows[0].id]);
   const fund = await as(db, lea, `select public.event_funding($1) as f`, [eventId]);
-  assert.equal(fund.rows[0].f.collected_cents, null, 'collecte ouverte : pas de total exact, même pour l’organisatrice');
-  assert.equal(fund.rows[0].f.progress_step, 0, '25 € sur 180 € : palier 0 %');
+  // Décision du 2026-11-22 : le total collecté est visible des préparateurs (jamais par personne).
+  assert.equal(fund.rows[0].f.collected_cents, 2500, 'total du groupe visible de l’organisatrice');
+  assert.equal(fund.rows[0].f.percent, 13, '25 € sur 180 €');
   assert.equal(fund.rows[0].f.my_confirmed_cents, 0, 'Léa ne voit pas le montant de Sarah');
   const act = await as(db, lea, `select actor_id from public.activity where event_id = $1 and kind = 'contribution_confirmed'`, [eventId]);
   assert.deepEqual(act.rows.map((r) => r.actor_id), [null], 'annonce anonyme');

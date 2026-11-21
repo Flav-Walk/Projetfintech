@@ -52,21 +52,24 @@ export function renderEmail(row: OutboxRow, publicUrl: string): OutgoingEmail {
     const beneficiary = str(p.beneficiary_name);
     const isBeneficiary = p.role === 'beneficiary';
     const url = `${base}/i/${token}`;
+    // Bénéficiaire : ni titre ni détail des préparatifs, la surprise reste entière.
     const intro = isBeneficiary
-      ? `${esc(inviter)} t’invite sur COMPLICE pour « ${esc(title)} ». Tu découvriras les mots et le cadeau préparés par tes proches le jour de l’ouverture : rien ne t’est montré avant.`
+      ? `${esc(inviter)} et tes proches te préparent une surprise sur COMPLICE. Tu découvriras leurs mots et leur cadeau le jour de l’ouverture : rien ne t’est montré avant.`
       : `${esc(inviter)} t’invite à préparer ensemble « ${esc(title)} »${beneficiary ? ` pour ${esc(beneficiary)}` : ''} : idées de cadeau, votes, cagnotte et capsule de mots.`;
+    const how = 'Dans l’app COMPLICE, connecte-toi ou crée ton compte avec cette adresse e-mail et confirme-la avec le code reçu : l’invitation t’attendra, tu choisiras de rejoindre ou non.';
+    const plain = (s: string) => s.replace(/&[a-z#0-9]+;/g, (m) => ({ '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" })[m] ?? m);
     return {
       to: row.to_email,
       tag: 'invitation',
       subject: isBeneficiary ? `${inviter} te prépare une surprise sur COMPLICE` : `${inviter} t’invite à préparer un cadeau commun`,
       html: layout({
-        preheader: `Rejoins « ${title} » sur COMPLICE.`,
+        preheader: isBeneficiary ? 'Une surprise se prépare pour toi.' : `Rejoins « ${title} » sur COMPLICE.`,
         title: isBeneficiary ? 'Une surprise se prépare' : 'Tu es invité·e !',
-        paragraphs: [intro, 'Ouvre le lien depuis ton téléphone : tu pourras créer ton compte et tu arriveras directement dans le groupe.'],
-        cta: { label: 'Rejoindre le groupe', url },
-        footnote: 'Ce lien est personnel, à usage unique et valable 7 jours. Tu n’attendais pas cette invitation ? Ignore simplement ce message : aucun compte n’est créé sans toi.',
+        paragraphs: [intro, how],
+        cta: { label: 'Voir l’invitation', url },
+        footnote: 'Cette invitation est personnelle : elle ne fonctionne qu’avec le compte de cette adresse e-mail. Valable 7 jours. Tu n’attendais pas ce message ? Ignore-le : aucun compte n’est créé sans toi.',
       }),
-      text: `${isBeneficiary ? 'Une surprise se prépare' : 'Tu es invité·e !'}\n\n${intro.replace(/&[a-z#0-9]+;/g, (m) => ({ '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" })[m] ?? m)}\n\nRejoindre le groupe : ${url}\n\nLien personnel, à usage unique, valable 7 jours. Tu n’attendais pas cette invitation ? Ignore ce message.`,
+      text: `${isBeneficiary ? 'Une surprise se prépare' : 'Tu es invité·e !'}\n\n${plain(intro)}\n\n${how}\n\nVoir l’invitation : ${url}\n\nInvitation personnelle, liée à cette adresse e-mail, valable 7 jours. Tu n’attendais pas ce message ? Ignore-le.`,
     };
   }
   // capsule_open

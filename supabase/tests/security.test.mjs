@@ -279,20 +279,20 @@ test('contributions : idempotence, confirmation par le service uniquement, total
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_1')`, [c1.id]); // webhook rejoué
   const f = (await as(db, sarah, `select public.event_funding($1) as f`, [ev])).rows[0].f;
   assert.equal(f.my_confirmed_cents, 1500);
-  assert.equal(f.progress_step, 0, '15 € sur 180 € : palier 0 %');
-  assert.equal(f.collected_cents, null);
+  assert.equal(f.collected_cents, 1500, 'total du groupe');
+  assert.equal(f.remaining_cents, 16500);
   assert.equal(f.contributor_count, undefined, 'plus de compteur de contributeurs');
 
   // Échec puis nouvelle tentative avec une nouvelle clé.
   const c2 = (await as(db, lea, `select (public.contribution_create($1, 3000, 'key-lea-00001')).*`, [ev])).rows[0];
   await as(db, 'service', `select public.contribution_settle($1, false, 'sim_2', 'Carte refusée (simulation)')`, [c2.id]);
-  assert.equal((await as(db, lea, `select public.event_funding($1) as f`, [ev])).rows[0].f.progress_step, 0);
+  assert.equal((await as(db, lea, `select public.event_funding($1) as f`, [ev])).rows[0].f.collected_cents, 1500, 'un échec ne compte pas');
   const c3 = (await as(db, lea, `select (public.contribution_create($1, 3000, 'key-lea-00002')).*`, [ev])).rows[0];
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_3')`, [c3.id]);
   const fl = (await as(db, lea, `select public.event_funding($1) as f`, [ev])).rows[0].f;
-  assert.equal(fl.progress_step, 25, '45 € sur 180 € : palier 25 %');
-  assert.equal(fl.collected_cents, null, 'gestionnaire : pas de total exact tant que la collecte est ouverte');
-  assert.equal(fl.my_confirmed_cents, 3000);
+  assert.equal(fl.collected_cents, 4500, '15 € + 30 €');
+  assert.equal(fl.percent, 25);
+  assert.equal(fl.my_confirmed_cents, 3000, 'part personnelle seulement');
 
   // Montants individuels privés, aucune annonce nominative.
   const seenByLea = await as(db, lea, `select user_id from public.contributions where event_id = $1`, [ev]);
@@ -314,12 +314,14 @@ test('contributions : idempotence, confirmation par le service uniquement, total
   assert.match(await errorOf(as(db, sarah, `select public.contribution_create($1, 1000, 'key-sarah-0003')`, [ev])), /contributions_closed/);
   assert.match(await errorOf(as(db, intrus, `select public.contribution_create($1, 1000, 'key-intrus-001')`, [ev])), /forbidden/);
 
-  // Collecte close : total exact pour les gestionnaires (achat), jamais pour les participants.
-  assert.equal((await as(db, lea, `select public.event_funding($1) as f`, [ev])).rows[0].f.collected_cents, 4500);
-  assert.equal((await as(db, sarah, `select public.event_funding($1) as f`, [ev])).rows[0].f.collected_cents, null);
+  // Collecte close : même total pour tous les préparateurs, collecte signalée close.
+  const closed = (await as(db, sarah, `select public.event_funding($1) as f`, [ev])).rows[0].f;
+  assert.equal(closed.collected_cents, 4500);
+  assert.equal(closed.contributions_open, false);
+  assert.equal((await as(db, intrus, `select public.event_funding($1) as f`, [ev])).rows[0].f, null);
 });
 
-test('cagnotte : objectif modifiable par un gestionnaire, paliers dans « Mes événements »', async () => {
+test('cagnotte : objectif modifiable par un gestionnaire, total dans « Mes événements »', async () => {
   const ev = await createEvent(db, lea, { target: 10000 });
   const inv = await invite(db, lea, ev);
   await join(db, sarah, inv.token);
@@ -330,7 +332,9 @@ test('cagnotte : objectif modifiable par un gestionnaire, paliers dans « Mes é
   const c = (await as(db, hugo, `select (public.contribution_create($1, 4000, 'key-target-001')).*`, [ev])).rows[0];
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_t')`, [c.id]);
   const mine = (await as(db, sarah, `select * from public.my_events_funding() where event_id = $1`, [ev])).rows[0];
-  assert.equal(mine.progress_step, 50);
+  assert.equal(mine.collected_cents, 4000);
+  assert.equal(mine.target_cents, 8000);
+  assert.equal(mine.percent, 50);
   assert.equal(mine.goal_reached, false);
   assert.equal((await as(db, intrus, `select * from public.my_events_funding() where event_id = $1`, [ev])).rows.length, 0);
 });

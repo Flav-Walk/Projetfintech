@@ -2,7 +2,7 @@
 -- Chaque ligne doit afficher ok = true.
 select 'migrations enregistrées' as controle,
        (select count(*) from supabase_migrations.schema_migrations where version like '2026%')::text as valeur,
-       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 10 as ok
+       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 11 as ok
 union all
 select 'tables COMPLICE présentes',
        count(*)::text,
@@ -82,6 +82,19 @@ select 'e-mails et remerciements (migration 10)',
          and not has_any_column_privilege('authenticated', 'public.email_outbox', 'select')
          and has_function_privilege('authenticated', 'public.prepare_email_invitation(uuid, public.member_role, text)', 'execute')
          and not has_function_privilege('authenticated', 'public.claim_email_batch(integer)', 'execute')
+union all
+select 'amis, invitations nominatives et total (migration 11)',
+       case when to_regclass('public.friendships') is not null and to_regclass('public.event_invites') is not null
+             and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'username')
+             and not has_table_privilege('authenticated', 'public.friendships', 'insert')
+             and has_function_privilege('authenticated', 'public.search_profiles(text)', 'execute')
+             and not has_function_privilege('anon', 'public.search_profiles(text)', 'execute')
+            then 'conformes' else 'ANOMALIE : appliquer 20261122001100_friends_invites_funding' end,
+       to_regclass('public.friendships') is not null and to_regclass('public.event_invites') is not null
+         and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'username')
+         and not has_table_privilege('authenticated', 'public.friendships', 'insert')
+         and has_function_privilege('authenticated', 'public.search_profiles(text)', 'execute')
+         and not has_function_privilege('anon', 'public.search_profiles(text)', 'execute')
 union all
 select 'aperçu d''invitation ouvert aux visiteurs',
        case when has_function_privilege('anon', 'public.preview_invitation(text)', 'execute') then 'ouvert' else 'fermé' end,

@@ -33,6 +33,10 @@ export const ERROR_MESSAGES = {
   api_not_configured: 'Le serveur de paiement n’est pas configuré dans l’app (EXPO_PUBLIC_API_URL).',
   rate_limited: 'Trop de demandes d’un coup. Patiente une minute.',
   invalid_email: 'Adresse e-mail invalide.',
+  invalid_username: 'Pseudo : 3 à 20 caractères, lettres minuscules, chiffres, point ou tiret bas.',
+  username_taken: 'Ce pseudo est déjà pris. Essaie une variante.',
+  blocked_user: 'Tu as bloqué cette personne. Débloque-la d’abord depuis ton profil.',
+  beneficiary_taken: 'Le bénéficiaire est déjà invité ou a déjà rejoint cette cagnotte.',
   email_not_configured: 'L’envoi d’e-mails n’est pas encore activé : partage plutôt le lien.',
   invalid_request: 'Demande invalide.',
   network: 'Connexion impossible. Vérifie ton réseau et réessaie.',
@@ -72,7 +76,8 @@ export type InvitationStatus =
   | 'exhausted'
   | 'removed'
   | 'event_closed'
-  | 'beneficiary_taken';
+  | 'beneficiary_taken'
+  | 'wrong_account';
 
 export const INVITATION_MESSAGES: Record<InvitationStatus, string> = {
   valid: 'Invitation valide.',
@@ -85,4 +90,5 @@ export const INVITATION_MESSAGES: Record<InvitationStatus, string> = {
   removed: "L'organisateur t'a retiré de ce groupe.",
   event_closed: 'Cet événement est terminé.',
   beneficiary_taken: 'Le bénéficiaire a déjà rejoint cet événement.',
+  wrong_account: 'Cette invitation personnelle a été envoyée à une autre adresse e-mail. Connecte-toi avec le compte de cette adresse.',
 };

@@ -9,7 +9,9 @@ export type BadgeKind = 'proposer' | 'voter' | 'helper' | 'wordsmith' | 'contrib
 export type StepKey = 'group' | 'vote' | 'purchase' | 'capsule' | 'reveal';
 export type NextAction =
   | 'invite'
+  | 'propose'
   | 'vote'
+  | 'claim_task'
   | 'select_gift'
   | 'contribute'
   | 'finish_task'
@@ -47,6 +49,13 @@ export interface EventProgress {
   steps_done: number;
   tasks_done: number;
   tasks_total: number;
+  tasks_open: number;
+  proposals: number;
+  my_proposals: number;
+  capsule_published: number;
+  preparers: number;
+  my_capsule: 'none' | 'draft' | 'published';
+  voted: boolean;
   next_action: NextAction;
   my_role: MemberRole;
   votes_open: boolean;
@@ -55,43 +64,36 @@ export interface EventProgress {
 }
 
 /**
- * Progression collective par paliers : les membres ne voient jamais le total exact pendant la collecte,
- * pour que les montants individuels restent privés (réduit les déductions, sans les rendre impossibles).
+ * event_funding (migration 11) : préparateurs uniquement (null pour le bénéficiaire et les non-membres).
+ * Le total du groupe est visible ; les montants des autres membres ne le sont jamais.
  */
-export type FundingStep = 0 | 25 | 50 | 75 | 100;
-
-/** event_funding : préparateurs uniquement (null pour le bénéficiaire et les non-membres). */
 export interface EventFunding {
   target_cents: number;
-  progress_step: FundingStep;
+  collected_cents: number;
+  remaining_cents: number;
+  /** Arrondi inférieur ; peut dépasser 100 si l'objectif est dépassé. */
+  percent: number;
   goal_reached: boolean;
   contributions_open: boolean;
+  contributions_close_at: string;
   /** Montant confirmé de l'utilisateur courant (visible de lui seul). */
   my_confirmed_cents: number;
-  /** Total exact : gestionnaires seulement, une fois la collecte close (achat du cadeau). Sinon null. */
-  collected_cents: number | null;
 }
 
-/** my_events_funding : un palier par événement préparé. */
+/** my_events_funding : total et objectif par événement préparé. */
 export interface EventFundingSummary {
   event_id: string;
-  progress_step: FundingStep;
+  collected_cents: number;
+  target_cents: number;
+  percent: number;
   goal_reached: boolean;
 }
 
-export function fundingStepLabel(step: FundingStep, goalReached: boolean): string {
-  if (goalReached) return 'Objectif atteint';
-  switch (step) {
-    case 75:
-    case 100:
-      return 'Plus des trois quarts de l’objectif';
-    case 50:
-      return 'Plus de la moitié de l’objectif';
-    case 25:
-      return 'Plus d’un quart de l’objectif';
-    default:
-      return 'La cagnotte démarre';
-  }
+/** Libellé court d'avancement, sans jamais de montant individuel. */
+export function fundingLabel(percent: number, goalReached: boolean): string {
+  if (goalReached) return percent > 100 ? 'Objectif dépassé' : 'Objectif atteint';
+  if (percent <= 0) return 'La cagnotte démarre';
+  return `${Math.min(percent, 99)} % de l’objectif`;
 }
 
 /** revealed_gift : le cadeau retenu, sans prix ni lien (bénéficiaire après l'ouverture). */
@@ -106,15 +108,103 @@ export interface InvitationPreview {
   status: import('./errors.js').InvitationStatus;
   /** Absent pour un lien inutilisable ; nul pour un visiteur non connecté. */
   event_id?: string | null;
-  title?: string;
-  beneficiary_name?: string;
-  occasion?: string;
+  /** Lien personnel envoyé par e-mail : seul le compte vérifié de cette adresse peut l'utiliser. */
+  personal?: boolean;
+  email_hint?: string | null;
+  /** Nuls pour un lien bénéficiaire (la surprise reste entière). */
+  title?: string | null;
+  beneficiary_name?: string | null;
+  occasion?: string | null;
   gift_at?: string;
   timezone?: string;
   organizer_name?: string | null;
-  member_count?: number;
+  member_count?: number | null;
   role?: MemberRole;
   expires_at?: string;
+}
+
+// ------------------------------------------------------------------ amis et invitations nominatives
+export type FriendRelation = 'friend' | 'incoming' | 'outgoing';
+
+/** my_friends : amis et demandes en cours (jamais d'e-mail). */
+export interface FriendRow {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_path: string | null;
+  relation: FriendRelation;
+  since: string;
+}
+
+/** search_profiles : 10 résultats au plus, photo seulement si une relation l'autorise. */
+export interface ProfileSearchRow {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_path: string | null;
+  relation: FriendRelation | 'none';
+}
+
+export interface BlockedRow {
+  user_id: string;
+  username: string;
+  display_name: string;
+  blocked_at: string;
+}
+
+export type FriendRequestStatus = 'sent' | 'accepted' | 'already_friends' | 'already_pending';
+
+/** my_event_invites : titre et détails nuls pour une invitation de bénéficiaire. */
+export interface ReceivedInvite {
+  id: string;
+  event_id: string;
+  role: MemberRole;
+  source: 'friend' | 'email';
+  inviter_name: string | null;
+  inviter_avatar: string | null;
+  title: string | null;
+  occasion: string | null;
+  gift_at: string | null;
+  member_count: number | null;
+  created_at: string;
+  expires_at: string;
+}
+
+export type InviteDeliveryStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
+
+/** event_invites_overview : suivi des invitations nominatives d'une cagnotte (gestionnaires). */
+export interface InviteOverviewRow {
+  id: string;
+  kind: 'friend' | 'email';
+  invitee_id: string | null;
+  display_name: string | null;
+  username: string | null;
+  avatar_path: string | null;
+  email_hint: string | null;
+  role: MemberRole;
+  status: InviteDeliveryStatus;
+  created_at: string;
+  responded_at: string | null;
+  expires_at: string;
+}
+
+export type InviteFriendStatus = 'invited' | 'not_friend' | 'already_member' | 'removed' | 'already_invited' | 'declined' | 'invalid';
+
+export const INVITE_FRIEND_MESSAGES: Record<InviteFriendStatus, string> = {
+  invited: 'Invitation envoyée',
+  not_friend: 'Plus dans tes amis',
+  already_member: 'Déjà dans le groupe',
+  removed: 'Retiré du groupe',
+  already_invited: 'Déjà invité',
+  declined: 'A refusé récemment',
+  invalid: 'Impossible',
+};
+
+/** my_surprises : bénéficiaire avant l'ouverture, la date et l'organisateur seulement. */
+export interface SurpriseRow {
+  event_id: string;
+  reveal_at: string;
+  organizer_name: string | null;
 }
 
 /** Contrat REST du backend pour les contributions simulées. */
@@ -142,7 +232,18 @@ export interface ContributionResponse {
 
 export type ProposalStatus = 'active' | 'withdrawn' | 'unavailable';
 export type CapsuleStatus = 'draft' | 'published';
-export type NotificationKind = 'invitation' | 'vote_closing' | 'task_assigned' | 'capsule_open' | 'gift_selected' | 'member_joined' | 'message' | 'thanks';
+export type NotificationKind =
+  | 'invitation'
+  | 'vote_closing'
+  | 'task_assigned'
+  | 'capsule_open'
+  | 'gift_selected'
+  | 'member_joined'
+  | 'message'
+  | 'thanks'
+  | 'friend_request'
+  | 'friend_accepted'
+  | 'event_invite';
 
 /** Réactions autorisées par la base (proposal_reactions.emoji). */
 export const REACTIONS = ['❤️', '😍', '😂', '🤔', '👎'] as const;

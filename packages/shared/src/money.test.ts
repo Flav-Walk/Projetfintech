@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAmountToCents, formatCents, progressPercent, validateContribution } from './money.js';
 import { errorCodeFrom } from './errors.js';
-import { fundingStepLabel } from './domain.js';
+import { fundingLabel } from './domain.js';
 
 test('parseAmountToCents', () => {
   assert.equal(parseAmountToCents('15'), 1500);
@@ -36,11 +36,12 @@ test('validateContribution', () => {
   assert.deepEqual(validateContribution('x'), { ok: false, reason: 'format' });
 });
 
-test('fundingStepLabel : paliers, jamais de montant', () => {
-  assert.equal(fundingStepLabel(0, false), 'La cagnotte démarre');
-  assert.equal(fundingStepLabel(50, false), 'Plus de la moitié de l’objectif');
-  assert.equal(fundingStepLabel(100, true), 'Objectif atteint');
-  assert.doesNotMatch(fundingStepLabel(75, false), /€|\d/);
+test('fundingLabel : avancement collectif lisible, objectif atteint ou dépassé', () => {
+  assert.equal(fundingLabel(0, false), 'La cagnotte démarre');
+  assert.equal(fundingLabel(37, false), '37 % de l’objectif');
+  assert.equal(fundingLabel(100, false), '99 % de l’objectif', 'arrondi inférieur : jamais 100 % sans l’atteindre');
+  assert.equal(fundingLabel(100, true), 'Objectif atteint');
+  assert.equal(fundingLabel(130, true), 'Objectif dépassé');
 });
 
 test('errorCodeFrom', () => {
