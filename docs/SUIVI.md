@@ -6,7 +6,43 @@
 | 2 | Comptes, création d'événement, invitations, accueil d'événement, membres, réglages, profil | **fait côté code**, non vérifié contre Supabase (migrations à appliquer) |
 | 3 | Propositions et votes, contributions simulées | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
 | 4 | Missions, discussion, capsule, timbres, rappels | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
-| 5 | Vérification distante multi-comptes, téléphone, revue sécurité/accessibilité | **en cours** : migration 1/6 appliquée à distance ; 2 à 6 prêtes, à appliquer |
+| 5 | Vérification distante multi-comptes, téléphone, revue sécurité/accessibilité | **en cours** : migrations 1-6 appliquées à distance ; migration 7 (privilèges) à appliquer, puis parcours multi-comptes |
+
+## Reprise — vérification distante (2026-11-21)
+
+### Vérifié (exécuté)
+- Migrations 1 à 6 appliquées par l'utilisateur (SQL Editor) : 6 versions dans `schema_migrations`,
+  `verify.sql` 10/10 dont la tâche `complice-reminders` (`*/10 * * * *`, active).
+- Avis Supabase : sécurité, avertissements attendus (RPC `SECURITY DEFINER` volontairement ouvertes,
+  `invitation_acceptances` sans politique = fermée) ; performance, index de clés étrangères et
+  `auth.uid()` réévalué par ligne dans 21 politiques (à optimiser plus tard, sans effet fonctionnel).
+- Branches poussées : `main`, `backend`, `front`.
+- 4 comptes de test confirmés créés à distance (organisatrice, participant, bénéficiaire, extérieure) ;
+  identifiants dans `supabase/.bundle/comptes-test.txt` (ignoré par Git).
+- Premier parcours réel : connexion des 4 comptes, couverture déposée (Storage), `create_event`,
+  invitation, aperçu anonyme, page `/i/<jeton>` sur Render, adhésions participant et bénéficiaire,
+  jeton épuisé ou inventé refusé (statuts `exhausted` / `invalid`).
+
+### Erreur trouvée et corrigée
+- **Aucun membre ne pouvait lire ni écrire une table** (`permission denied for table events`) : sur les
+  projets Supabase récents, les nouvelles tables ne reçoivent plus de droits par défaut. Migration 7
+  (`20261121000700_table_privileges.sql`) : droits explicites + mêmes retraits qu'avant. Le banc PGlite
+  reproduit désormais ce comportement (21/35 échecs sans la migration 7, 36/36 avec).
+
+### Bloqué
+- **Migration 7 à distance** : écriture refusée par le classificateur du mode automatique de Claude Code
+  (« Undermining Oversight »). À coller dans le SQL Editor : `npm run db:bundle -- 20261121000700`.
+- Parcours multi-comptes complet, refus d'accès et dévoilement : dès la migration 7 appliquée.
+- Render sert toujours `a640951` après le push (voir docs/SETUP.md §5).
+
+### Cartes
+- Graphify : `graphify-out/` (graph.html, GRAPH_REPORT.md, graph.json), code seul (AST, 0 jeton) :
+  709 nœuds, 1 859 liens, 55 communautés. Limites : SQL absent (`tree_sitter_sql` non installé :
+  `uv tool install --upgrade "graphifyy[sql]"`), documents et images non extraits. Mise à jour :
+  `/graphify . --update`.
+- Floorplan : plugin non installé (seulement cloné dans un autre projet). Installation :
+  `claude plugin marketplace add haydenschmitty/floorplan` puis `claude plugin install floorplan@floorplan`,
+  nouvelle session, puis demander « un floorplan de COMPLICE ».
 
 ## Reprise — application distante (2026-11-20, depuis `6fa6d61`)
 

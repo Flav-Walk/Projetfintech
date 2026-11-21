@@ -6,8 +6,8 @@ Projet : `https://uecptmijcjwmzdebeugk.supabase.co`.
 
 ### Appliquer les migrations
 
-6 fichiers dans `supabase/migrations/`, dans l'ordre (1 à 5 : schéma ; 6 : rappels, discussion,
-missions). Chaque option enregistre les versions dans `supabase_migrations.schema_migrations`, comme
+7 fichiers dans `supabase/migrations/`, dans l'ordre (1 à 5 : schéma ; 6 : rappels, discussion,
+missions ; 7 : privilèges explicites sur les tables). Chaque option enregistre les versions dans `supabase_migrations.schema_migrations`, comme
 `supabase db push`, pour que les outils restent cohérents ensuite.
 
 Option A — un seul copier-coller (recommandé) :
@@ -18,8 +18,13 @@ Option A — un seul copier-coller (recommandé) :
 3. Avec une version de départ, le fichier commence par un garde-fou : il s'arrête sans rien modifier si
    une migration antérieure n'est pas enregistrée, ou si l'une des migrations incluses l'est déjà.
 
-État au 2026-11-20 : la migration 1 est appliquée et enregistrée. Pour la suite :
-`npm run db:bundle -- 20261120000200` (fichier `supabase/.bundle/apply.sql`, migrations 2 à 6), puis étape 2.
+État au 2026-11-21 : migrations 1 à 6 appliquées et enregistrées. Reste la 7 :
+`npm run db:bundle -- 20261121000700`, puis étape 2. Sans elle, l'app et l'API ne peuvent ni lire ni écrire.
+
+Privilèges : sur les projets Supabase récents, une nouvelle table du schéma `public` ne donne à `anon`,
+`authenticated` et `service_role` que TRUNCATE, REFERENCES, TRIGGER et MAINTAIN. Toute migration qui
+crée une table doit donc accorder ses droits explicitement (modèle : `20261121000700_table_privileges.sql`).
+Le banc PGlite (`supabase/tests/supabase-shim.sql`) reproduit ce comportement.
 
 Option B — script avec jeton d'accès personnel (supabase.com/dashboard/account/tokens, préfixe `sbp_`) :
 `supabase/.env` (ignoré par Git) contient `SUPABASE_ACCESS_TOKEN=sbp_…`, puis
@@ -31,9 +36,9 @@ authentification, puis demander l'application des migrations.
 
 ### Vérification
 
-Coller `supabase/verify.sql` dans le SQL Editor : chaque ligne doit afficher `ok = true` (6 migrations,
+Coller `supabase/verify.sql` dans le SQL Editor : chaque ligne doit afficher `ok = true` (7 migrations,
 17 tables, RLS partout, trigger profil, buckets privés, politiques Storage, 7 tables Realtime, règlement
-fermé aux clients, aperçu d'invitation ouvert). La dernière requête liste la tâche `complice-reminders`.
+fermé aux clients, privilèges de tables conformes, aperçu d'invitation ouvert). La dernière requête liste la tâche `complice-reminders`.
 
 ### Rappels planifiés (pg_cron)
 
@@ -132,6 +137,11 @@ marqué `is_demo = true` (badge « Données de démo » dans l'app) :
 | Camille | Bénéficiaire | ne voit rien avant l'ouverture ; capsule après |
 
 Les données de démo sont identifiables : `events.is_demo`, `contributions.is_simulated`, e-mails en `@example.com`.
+
+Sans clé secrète (état du 2026-11-21), 4 comptes confirmés ont été créés directement en SQL sur le projet
+distant : `lea` (organisatrice), `hugo` (participant), `camille` (bénéficiaire), `nora` (extérieure),
+tous en `.demo@example.com`. Mot de passe commun dans `supabase/.bundle/comptes-test.txt` (ignoré par Git,
+présent sur le poste de développement seulement). `seed:demo` les réutilise s'il est lancé plus tard.
 
 ## 5. Render
 
