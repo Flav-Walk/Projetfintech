@@ -129,7 +129,7 @@ export default function EventHome() {
           <>
             {/* Argent (corail) */}
             {funding.data ? (
-              <FundingCard collected={funding.data.collected_cents} target={funding.data.target_cents} contributors={funding.data.contributor_count}>
+              <FundingCard funding={funding.data}>
                 {p.contributions_open ? (
                   <Button variant="white" label="Participer" iconRight={<ArrowRight size={20} color={colors.coral} />} onPress={() => go('contribute')} />
                 ) : (

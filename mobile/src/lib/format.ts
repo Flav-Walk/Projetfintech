@@ -67,7 +67,8 @@ export function activityLabel(a: ActivityRow): string {
     case 'gift_selected':
       return `${who} a choisi le cadeau`;
     case 'contribution_confirmed':
-      return `${who} a participé à la cagnotte`;
+      // Annonce anonyme (migration 8) : ni nom ni montant.
+      return 'Une nouvelle participation a rejoint la cagnotte';
     case 'task_claimed':
       return `${who} a pris la mission « ${String(a.data.title ?? '')} »`;
     case 'task_done':

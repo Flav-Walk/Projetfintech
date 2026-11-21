@@ -54,16 +54,58 @@ export interface EventProgress {
   revealed: boolean;
 }
 
+/**
+ * Progression collective par paliers : les membres ne voient jamais le total exact pendant la collecte,
+ * pour que les montants individuels restent privés (réduit les déductions, sans les rendre impossibles).
+ */
+export type FundingStep = 0 | 25 | 50 | 75 | 100;
+
+/** event_funding : préparateurs uniquement (null pour le bénéficiaire et les non-membres). */
 export interface EventFunding {
-  collected_cents: number;
   target_cents: number;
-  contributor_count: number;
+  progress_step: FundingStep;
+  goal_reached: boolean;
+  contributions_open: boolean;
+  /** Montant confirmé de l'utilisateur courant (visible de lui seul). */
   my_confirmed_cents: number;
+  /** Total exact : gestionnaires seulement, une fois la collecte close (achat du cadeau). Sinon null. */
+  collected_cents: number | null;
+}
+
+/** my_events_funding : un palier par événement préparé. */
+export interface EventFundingSummary {
+  event_id: string;
+  progress_step: FundingStep;
+  goal_reached: boolean;
+}
+
+export function fundingStepLabel(step: FundingStep, goalReached: boolean): string {
+  if (goalReached) return 'Objectif atteint';
+  switch (step) {
+    case 75:
+    case 100:
+      return 'Plus des trois quarts de l’objectif';
+    case 50:
+      return 'Plus de la moitié de l’objectif';
+    case 25:
+      return 'Plus d’un quart de l’objectif';
+    default:
+      return 'La cagnotte démarre';
+  }
+}
+
+/** revealed_gift : le cadeau retenu, sans prix ni lien (bénéficiaire après l'ouverture). */
+export interface RevealedGift {
+  id: string;
+  title: string;
+  description: string | null;
+  image_path: string | null;
 }
 
 export interface InvitationPreview {
   status: import('./errors.js').InvitationStatus;
-  event_id?: string;
+  /** Absent pour un lien inutilisable ; nul pour un visiteur non connecté. */
+  event_id?: string | null;
   title?: string;
   beneficiary_name?: string;
   occasion?: string;

@@ -1,4 +1,4 @@
-import { formatCents, progressPercent, STEP_LABELS, type EventProgress } from '@complice/shared';
+import { formatCents, fundingStepLabel, STEP_LABELS, type EventFunding, type EventProgress } from '@complice/shared';
 import { Check, Coins } from 'lucide-react-native';
 import { View } from 'react-native';
 import { initials } from '@/lib/format';
@@ -51,36 +51,36 @@ export function AvatarStack({ names, max = 6 }: { names: string[]; max?: number 
   );
 }
 
-/** Progression financière (corail). Jamais mélangée avec l'organisation. */
-export function FundingCard({ collected, target, contributors, children }: { collected: number; target: number; contributors: number; children?: React.ReactNode }) {
-  const pct = progressPercent(collected, target);
+/**
+ * Progression financière (corail). Jamais mélangée avec l'organisation.
+ * Le groupe voit un palier collectif, jamais le total exact pendant la collecte : les montants
+ * individuels restent privés. Le total exact n'est fourni qu'aux gestionnaires, collecte close.
+ */
+export function FundingCard({ funding, children }: { funding: EventFunding; children?: React.ReactNode }) {
+  const step = funding.goal_reached ? 100 : funding.progress_step;
+  const label = fundingStepLabel(funding.progress_step, funding.goal_reached);
   return (
     <View style={{ backgroundColor: colors.coral, borderRadius: 22, padding: space.xl, gap: space.md }}>
-      <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Row gap={space.md}>
-          <Coins color={colors.white} size={30} strokeWidth={1.75} />
-          <View>
-            <T v="small" color={colors.white} style={{ opacity: 0.92 }}>
-              Cagnotte commune
-            </T>
-            <T v="money" color={colors.white} accessibilityLabel={`${formatCents(collected)} collectés sur ${formatCents(target)}`}>
-              {formatCents(collected)}
-              <T v="bodyBold" color={colors.white}>
-                {'  / '}
-                {formatCents(target)}
-              </T>
-            </T>
-          </View>
-        </Row>
-        <View style={{ backgroundColor: colors.white, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-          <T v="label" color={colors.coralDark}>
-            {pct} %
+      <Row gap={space.md} style={{ alignItems: 'flex-start' }}>
+        <Coins color={colors.white} size={30} strokeWidth={1.75} />
+        <View style={{ flex: 1 }}>
+          <T v="small" color={colors.white} style={{ opacity: 0.92 }}>
+            Cagnotte commune · objectif {formatCents(funding.target_cents)}
+          </T>
+          <T v="h2" color={colors.white}>
+            {label}
           </T>
         </View>
       </Row>
-      <ProgressBar value={pct} track="rgba(255,255,255,0.35)" fill={colors.white} label={`Cagnotte remplie à ${pct} %`} />
+      <ProgressBar value={step} track="rgba(255,255,255,0.35)" fill={colors.white} label={`Cagnotte : ${label.toLowerCase()}`} />
+      {funding.collected_cents !== null ? (
+        <T v="bodyBold" color={colors.white}>
+          Total collecté : {formatCents(funding.collected_cents)} (visible des organisateurs, collecte close)
+        </T>
+      ) : null}
       <T v="small" color={colors.white}>
-        {contributors === 0 ? 'Personne n’a encore participé' : `${contributors} participation${contributors > 1 ? 's' : ''} · montants individuels privés`}
+        {funding.my_confirmed_cents > 0 ? `Ta participation : ${formatCents(funding.my_confirmed_cents)}, visible de toi seul. ` : ''}
+        Le groupe suit la cagnotte par paliers, sans les montants de chacun.
       </T>
       {children}
     </View>

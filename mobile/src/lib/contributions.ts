@@ -56,6 +56,7 @@ export function useContribute(eventId: string) {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: contributionKeys.mine(eventId) });
       qc.invalidateQueries({ queryKey: qk.funding(eventId) });
+      qc.invalidateQueries({ queryKey: qk.myFunding });
       qc.invalidateQueries({ queryKey: qk.progress(eventId) });
       qc.invalidateQueries({ queryKey: qk.event(eventId) });
       qc.invalidateQueries({ queryKey: ['event', eventId, 'badges'] });

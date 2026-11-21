@@ -5,12 +5,13 @@ import { useMemo } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProposalCard } from '@/components/idea-parts';
+import { PrivateImage } from '@/components/private-image';
 import { EmptyState, ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Row, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { formatEventDate, timeUntil } from '@/lib/format';
 import { useCastVote, useIdeasRealtime, useMyVote, useProposals, useRanking, useReactions, useToggleReaction } from '@/lib/ideas';
-import { useEvent, useProgress } from '@/lib/queries';
+import { useEvent, useProgress, useRevealedGift } from '@/lib/queries';
 import { useEventId } from '@/lib/use-event-context';
 import { useNow } from '@/lib/use-now';
 import { colors, gutter, space } from '@/theme/tokens';
@@ -31,6 +32,8 @@ export default function Ideas() {
   const reactions = useReactions(id, visible.map((p) => p.id));
   const vote = useCastVote(id);
   const react = useToggleReaction(id);
+  // Bénéficiaire : le cadeau retenu sans prix ni lien (les idées et leurs prix lui sont fermées).
+  const gift = useRevealedGift(id, isBeneficiary);
 
   if (event.isPending || progress.isPending || proposals.isPending) return <Loading />;
   if (event.isError || proposals.isError || !event.data || !progress.data) {
@@ -65,10 +68,15 @@ export default function Ideas() {
           <T v="h1" accessibilityRole="header">
             Ton cadeau
           </T>
-          {selected ? (
+          {gift.isPending ? (
+            <Loading />
+          ) : gift.data ? (
             <Card tone="lavender" style={{ gap: space.sm }}>
-              <T v="h2">{selected.title}</T>
-              {selected.description ? <T color={colors.inkSoft}>{selected.description}</T> : null}
+              {gift.data.image_path ? (
+                <PrivateImage path={gift.data.image_path} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16 }} label={`Photo du cadeau : ${gift.data.title}`} />
+              ) : null}
+              <T v="h2">{gift.data.title}</T>
+              {gift.data.description ? <T color={colors.inkSoft}>{gift.data.description}</T> : null}
             </Card>
           ) : (
             <EmptyState title="Surprise !" text="Ton groupe garde le secret sur le cadeau." />
