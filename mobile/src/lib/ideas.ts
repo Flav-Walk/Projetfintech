@@ -14,8 +14,10 @@ export const ideasKeys = {
   comments: (pid: string) => ['proposal', pid, 'comments'] as const,
 };
 
+// Relation nommée : PostgREST voit aussi proposals↔profiles via proposal_reactions et votes, et refuse
+// un embarquement ambigu (« more than one relationship was found »).
 const PROPOSAL_COLUMNS =
-  'id, event_id, author_id, title, price_cents, previous_price_cents, price_changed_at, product_url, description, image_path, status, vote_count, created_at, profiles(display_name)';
+  'id, event_id, author_id, title, price_cents, previous_price_cents, price_changed_at, product_url, description, image_path, status, vote_count, created_at, profiles!proposals_author_id_fkey(display_name)';
 
 /** Propositions visibles (RLS : préparateurs ; bénéficiaire = seulement le cadeau retenu, après ouverture). */
 export function useProposals(eventId: string) {
