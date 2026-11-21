@@ -352,6 +352,29 @@ test('fonctions internes non appelables par un client (anti-triche, anti-spam)',
   assert.match(await errorOf(as(db, null, `select public.event_progress($1)`, [eventId])) ?? 'aucune erreur', /permission denied/);
 });
 
+test('privilèges de tables explicites (indépendants des droits par défaut du projet)', async () => {
+  const priv = async (role, table, p) =>
+    (await db.query(`select has_table_privilege($1, $2, $3) as ok`, [role, `public.${table}`, p])).rows[0].ok;
+  // Les clients lisent et écrivent via la RLS…
+  assert.equal(await priv('authenticated', 'events', 'select'), true);
+  assert.equal(await priv('authenticated', 'proposals', 'insert'), true);
+  assert.equal(await priv('authenticated', 'messages', 'insert'), true);
+  assert.equal(await priv('authenticated', 'capsule_entries', 'delete'), true);
+  // … sans opérations dangereuses ni écritures réservées au serveur.
+  for (const table of ['events', 'contributions', 'messages', 'capsule_entries']) {
+    assert.equal(await priv('authenticated', table, 'truncate'), false, `truncate ${table}`);
+    assert.equal(await priv('anon', table, 'select'), false, `anon select ${table}`);
+  }
+  assert.equal(await priv('authenticated', 'contributions', 'insert'), false);
+  assert.equal(await priv('authenticated', 'votes', 'insert'), false);
+  assert.equal(await priv('authenticated', 'user_badges', 'insert'), false);
+  assert.equal(await priv('authenticated', 'messages', 'update'), false);
+  // Le service (API, démo) peut marquer un événement de démonstration.
+  assert.equal(await priv('service_role', 'events', 'update'), true);
+  assert.equal(await errorOf(as(db, 'service', `update public.events set is_demo = true where id = $1`, [eventId])), null);
+  await as(db, 'service', `update public.events set is_demo = false where id = $1`, [eventId]);
+});
+
 // ---------------------------------------------------------------- storage
 test('storage : chemins imposés et capsule scellée', async () => {
   const ok = `${eventId}/capsule/${sarah}/photo.jpg`;
