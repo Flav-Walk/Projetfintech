@@ -28,21 +28,31 @@
   projets Supabase récents, les nouvelles tables ne reçoivent plus de droits par défaut. Migration 7
   (`20261121000700_table_privileges.sql`) : droits explicites + mêmes retraits qu'avant. Le banc PGlite
   reproduit désormais ce comportement (21/35 échecs sans la migration 7, 36/36 avec).
+- Revue de la migration 7 avant application (`aff4a94`) : insertion limitée aux colonnes métier
+  (un message ne peut plus être antidaté ; pas de compteur ni de date de publication choisis par le
+  client), aucune insertion directe de mission, préférences limitées aux interrupteurs,
+  `invitation_acceptances` illisible. Détail et avis Supabase un par un : docs/SECURITE-SUPABASE.md.
+
+### Risques relevés, à décider
+- Déduction d'un montant individuel (activité nommée + total diffusé en temps réel) : voir
+  docs/SECURITE-SUPABASE.md §2.
+- `preview_invitation` détaille aussi les liens expirés ou épuisés ; `is_revealed` et `proposal_event`
+  répondent sans contrôle d'appartenance (migration 8 proposée).
 
 ### Bloqué
 - **Migration 7 à distance** : écriture refusée par le classificateur du mode automatique de Claude Code
   (« Undermining Oversight »). À coller dans le SQL Editor : `npm run db:bundle -- 20261121000700`.
 - Parcours multi-comptes complet, refus d'accès et dévoilement : dès la migration 7 appliquée.
-- Render sert toujours `a640951` après le push (voir docs/SETUP.md §5).
+- Render sert toujours `a640951` après le push (voir docs/SETUP.md §5) : déploiement manuel requis.
 
 ### Cartes
 - Graphify : `graphify-out/` (graph.html, GRAPH_REPORT.md, graph.json), code seul (AST, 0 jeton) :
   709 nœuds, 1 859 liens, 55 communautés. Limites : SQL absent (`tree_sitter_sql` non installé :
   `uv tool install --upgrade "graphifyy[sql]"`), documents et images non extraits. Mise à jour :
   `/graphify . --update`.
-- Floorplan : plugin non installé (seulement cloné dans un autre projet). Installation :
-  `claude plugin marketplace add haydenschmitty/floorplan` puis `claude plugin install floorplan@floorplan`,
-  nouvelle session, puis demander « un floorplan de COMPLICE ».
+- Floorplan : plugin installé au niveau du projet (`.claude/settings.json` : marketplace
+  `haydenschmitty/floorplan`, plugin `floorplan@floorplan`). Chargé à la prochaine session de Claude
+  Code dans ce dépôt ; la carte n'est pas encore générée (demander « un floorplan de COMPLICE »).
 
 ## Reprise — application distante (2026-11-20, depuis `6fa6d61`)
 
