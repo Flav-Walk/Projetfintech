@@ -2,7 +2,7 @@
 -- Chaque ligne doit afficher ok = true.
 select 'migrations enregistrées' as controle,
        (select count(*) from supabase_migrations.schema_migrations where version like '2026%')::text as valeur,
-       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 7 as ok
+       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 8 as ok
 union all
 select 'tables COMPLICE présentes',
        count(*)::text,
@@ -56,6 +56,15 @@ select 'privilèges de tables (migration 7)',
          and has_table_privilege('service_role', 'public.events', 'update')
          and not has_table_privilege('authenticated', 'public.events', 'truncate')
          and not has_table_privilege('anon', 'public.events', 'select')
+union all
+select 'montants hors de events, illisibles par les clients (migration 8)',
+       case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'events' and column_name like '%cents')
+             and not has_any_column_privilege('authenticated', 'public.event_finances', 'select')
+             and not has_function_privilege('authenticated', 'public.event_contributors(uuid)', 'execute')
+            then 'conformes' else 'ANOMALIE : appliquer 20261121000800_privacy_hardening' end,
+       not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'events' and column_name like '%cents')
+         and not has_any_column_privilege('authenticated', 'public.event_finances', 'select')
+         and not has_function_privilege('authenticated', 'public.event_contributors(uuid)', 'execute')
 union all
 select 'aperçu d''invitation ouvert aux visiteurs',
        case when has_function_privilege('anon', 'public.preview_invitation(text)', 'execute') then 'ouvert' else 'fermé' end,

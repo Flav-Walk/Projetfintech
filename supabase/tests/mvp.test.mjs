@@ -45,8 +45,11 @@ test('parcours : idée, vote, contribution, mission, message, capsule, puis dév
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_1')`, [c1.rows[0].id]);
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_1')`, [c1.rows[0].id]);
   const fund = await as(db, lea, `select public.event_funding($1) as f`, [eventId]);
-  assert.equal(fund.rows[0].f.collected_cents, 2500);
+  assert.equal(fund.rows[0].f.collected_cents, null, 'collecte ouverte : pas de total exact, même pour l’organisatrice');
+  assert.equal(fund.rows[0].f.progress_step, 0, '25 € sur 180 € : palier 0 %');
   assert.equal(fund.rows[0].f.my_confirmed_cents, 0, 'Léa ne voit pas le montant de Sarah');
+  const act = await as(db, lea, `select actor_id from public.activity where event_id = $1 and kind = 'contribution_confirmed'`, [eventId]);
+  assert.deepEqual(act.rows.map((r) => r.actor_id), [null], 'annonce anonyme');
 
   // Mission, message, capsule
   const { rows: [t] } = await as(db, sarah, `select id from public.tasks where event_id = $1 and kind = 'wrap'`, [eventId]);
@@ -70,8 +73,14 @@ test('parcours : idée, vote, contribution, mission, message, capsule, puis dév
   const caps = await as(db, camille, `select body from public.capsule_entries where event_id = $1`, [eventId]);
   assert.deepEqual(caps.rows.map((r) => r.body), ['Joyeux anniversaire !']);
   assert.equal((await as(db, camille, `select public.can_read_media($1) as ok`, [`${eventId}/capsule/${sarah}/photo.jpg`])).rows[0].ok, true);
-  // Le bénéficiaire voit le cadeau retenu, jamais la discussion ni les montants
-  assert.equal((await as(db, camille, `select id from public.proposals where event_id = $1`, [eventId])).rows.length, 1);
+  // Le bénéficiaire voit le cadeau retenu sans prix ni lien, jamais la discussion ni les montants
+  assert.equal((await as(db, camille, `select id from public.proposals where event_id = $1`, [eventId])).rows.length, 0);
+  const gift = (await as(db, camille, `select public.revealed_gift($1) as g`, [eventId])).rows[0].g;
+  assert.equal(gift.title, 'Platine vinyle');
+  assert.deepEqual(Object.keys(gift).sort(), ['description', 'id', 'image_path', 'title']);
+  assert.equal((await as(db, camille, `select public.can_read_media($1) as ok`, [img])).rows[0].ok, true, 'photo du cadeau retenu');
+  const evCols = Object.keys((await as(db, camille, `select * from public.events where id = $1`, [eventId])).rows[0]);
+  assert.ok(!evCols.some((c) => c.includes('cents')), 'aucun montant dans events');
   assert.equal((await as(db, camille, `select id from public.messages where event_id = $1`, [eventId])).rows.length, 0);
   assert.equal((await as(db, camille, `select public.event_funding($1) as f`, [eventId])).rows[0].f, null);
   // Capsule scellée après l'ouverture
@@ -164,7 +173,7 @@ test('rappels : fin de vote (non-votants) et ouverture de capsule, idempotents',
 
   assert.match(await errorOf(as(db, sarah, `select public.run_due_reminders()`)), /permission denied/);
   await as(db, sarah, `select public.refresh_reminders()`);
-  await as(db, sarah, `select public.refresh_reminders()`);
+  assert.equal((await as(db, sarah, `select public.refresh_reminders() as n`)).rows[0].n, 0, 'second appel dans la minute : ignoré');
   const vs = await as(db, sarah, `select count(*)::int as n from public.notifications where kind = 'vote_closing' and event_id = $1`, [ev]);
   assert.equal(vs.rows[0].n, 1, 'Sarah n’a pas voté : un seul rappel');
   const vl = await as(db, lea, `select count(*)::int as n from public.notifications where kind = 'vote_closing' and event_id = $1`, [ev]);
