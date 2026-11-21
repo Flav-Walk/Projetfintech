@@ -40,8 +40,11 @@ export const api = {
   myContributions: (eventId?: string) =>
     request<{ contributions: ContributionResponse[] }>('GET', `/v1/contributions${eventId ? `?event_id=${eventId}` : ''}`),
   deleteAccount: () => request<void>('DELETE', '/v1/account', { confirm: 'SUPPRIMER' }),
+  /** Invitation à usage unique envoyée par e-mail (Brevo). Même adresse dans l'heure : ignorée. */
+  inviteByEmail: (eventId: string, email: string, role: 'participant' | 'co_organizer' | 'beneficiary') =>
+    request<{ status: 'queued' | 'already_sent' }>('POST', '/v1/invitations/email', { event_id: eventId, email, role }),
   health: async () => {
     const res = await fetch(`${env.apiUrl}/health`);
-    return (await res.json()) as { status: string; admin_configured: boolean };
+    return (await res.json()) as { status: string; admin_configured: boolean; email_configured?: boolean };
   },
 };

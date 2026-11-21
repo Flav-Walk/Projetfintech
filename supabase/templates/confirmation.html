@@ -1,0 +1,32 @@
+<!doctype html>
+<!--
+  COMPLICE — Supabase Auth > Emails > Templates > « Confirm signup ».
+  Objet conseillé : Confirme ton adresse pour rejoindre COMPLICE
+  Variables Supabase : {{ .ConfirmationURL }} (lien, ramène dans l'app), {{ .Token }} (code à 6 chiffres,
+  utile si le lien s'ouvre sur un autre appareil ou en Expo Go).
+-->
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Confirme ton adresse</title></head>
+<body style="margin:0;padding:0;background:#FFF7F2;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF7F2;">
+<tr><td align="center" style="padding:24px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#FFFFFF;border-radius:20px;border:1px solid #F0E6E0;">
+<tr><td style="padding:28px 24px 8px;font-family:Arial,Helvetica,sans-serif;color:#2A1446;">
+<div style="font-size:26px;font-weight:900;letter-spacing:-0.5px;">complice</div>
+<h1 style="font-size:22px;line-height:28px;margin:20px 0 12px;">Plus qu’une étape</h1>
+<p style="font-size:16px;line-height:24px;margin:0 0 14px;">Confirme ton adresse pour activer ton compte. Si tu as ouvert une invitation, tu arriveras directement dans le groupe.</p>
+</td></tr>
+<tr><td align="center" style="padding:8px 24px 16px;">
+<a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#F2553D;color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:700;text-decoration:none;padding:16px 28px;border-radius:16px;">Confirmer mon adresse</a>
+</td></tr>
+<tr><td style="padding:0 24px 8px;font-family:Arial,Helvetica,sans-serif;color:#2A1446;">
+<p style="font-size:15px;line-height:22px;margin:0 0 8px;">Le lien ne s’ouvre pas dans l’app ? Saisis ce code dans l’écran de confirmation :</p>
+<p style="font-size:28px;font-weight:900;letter-spacing:6px;margin:0 0 16px;text-align:center;color:#6A4BF5;">{{ .Token }}</p>
+</td></tr>
+<tr><td style="padding:0 24px 24px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:19px;color:#6B5A7E;">
+Le lien et le code expirent après un délai limité ; tu peux en demander un nouveau depuis l’app. Tu n’as pas créé de compte COMPLICE ? Ignore ce message : rien ne sera activé.
+</td></tr>
+</table>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A99BB8;margin:16px 0 0;">COMPLICE — le cadeau commun qu’on prépare ensemble.</p>
+</td></tr></table>
+</body></html>

@@ -1,6 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { ContributionResponse } from '@complice/shared';
 import type { Config } from './config.js';
+import type { OutboxRow } from './email-templates.js';
+
+export type ClaimedEmail = OutboxRow & { attempts: number };
 
 /**
  * Accès aux données du backend. Deux identités distinctes :
@@ -15,6 +18,11 @@ export interface DataGateway {
   settleContribution(id: string, success: boolean, providerRef: string, failureReason?: string): Promise<ContributionResponse>;
   listMyContributions(jwt: string, eventId?: string): Promise<ContributionResponse[]>;
   deleteAccount(userId: string): Promise<void>;
+  /** Invitation par e-mail (RPC sous l'identité du gestionnaire : droits contrôlés en SQL). */
+  prepareEmailInvitation(jwt: string, eventId: string, role: string, email: string): Promise<{ status: 'queued' | 'already_sent' }>;
+  /** File d'e-mails métier (clé secrète). */
+  claimEmails(limit: number): Promise<ClaimedEmail[]>;
+  completeEmail(id: number, ok: boolean, providerId: string | null, error: string | null, final?: boolean): Promise<void>;
 }
 
 export class GatewayError extends Error {
@@ -107,6 +115,25 @@ export class SupabaseGateway implements DataGateway {
     }
     const { error: delError } = await admin.auth.admin.deleteUser(userId);
     if (delError) throw new GatewayError('account_deletion_failed', 500);
+  }
+
+  async prepareEmailInvitation(jwt: string, eventId: string, role: string, email: string) {
+    const { data, error } = await this.asUser(jwt).rpc('prepare_email_invitation', { p_event: eventId, p_role: role, p_email: email });
+    if (error) throw toGatewayError(error);
+    return { status: (data as { status: 'queued' | 'already_sent' }).status };
+  }
+
+  async claimEmails(limit: number) {
+    const { data, error } = await this.requireAdmin().rpc('claim_email_batch', { p_limit: limit });
+    if (error) throw toGatewayError(error);
+    return (data ?? []) as ClaimedEmail[];
+  }
+
+  async completeEmail(id: number, ok: boolean, providerId: string | null, error: string | null, final = false) {
+    const { error: err } = await this.requireAdmin().rpc('complete_email', {
+      p_id: id, p_ok: ok, p_provider_id: providerId, p_error: error, p_final: final,
+    });
+    if (err) throw toGatewayError(err);
   }
 }
 

@@ -1,15 +1,18 @@
 import { INVITATION_EXPIRY_CHOICES, ROLE_LABELS, messageFor, type MemberRole } from '@complice/shared';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
-import { Copy, Link2, Share2 } from 'lucide-react-native';
+import { Copy, Link2, Mail, Share2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Share, Switch, View } from 'react-native';
 import { BackHeader } from '@/components/back-header';
 import { ConfirmButton } from '@/components/confirm-button';
 import { Avatar } from '@/components/event-parts';
 import { ErrorState, Loading } from '@/components/states';
-import { Banner, Button, Card, Chip, Row, Screen, T } from '@/components/ui';
+import { Banner, Button, Card, Chip, Field, Row, Screen, T } from '@/components/ui';
+import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { isEmail } from '@/lib/auth-errors';
+import { hapticTap } from '@/lib/haptics';
 import { invitationShareUrl, isApiConfigured } from '@/lib/env';
 import { formatShortDate } from '@/lib/format';
 import {
@@ -55,6 +58,7 @@ export default function Members() {
       {error ? <Banner tone="error">{error}</Banner> : null}
 
       {isManager ? <InvitePanel eventId={id} isOrganizer={isOrganizer} hasBeneficiary={!!event.data?.beneficiary_user_id} /> : null}
+      {isManager && isApiConfigured ? <EmailInvitePanel eventId={id} isOrganizer={isOrganizer} hasBeneficiary={!!event.data?.beneficiary_user_id} onSent={() => invitations.refetch()} /> : null}
 
       <T v="h2">Le groupe ({list.filter((m) => m.role !== 'beneficiary').length})</T>
       {list.map((m, i) => (
@@ -189,12 +193,65 @@ function InvitePanel({ eventId, isOrganizer, hasBeneficiary }: { eventId: string
               icon={<Copy size={18} color={colors.ink} />}
               onPress={async () => {
                 await Clipboard.setStringAsync(link);
+                hapticTap();
                 setCopied(true);
+                setTimeout(() => setCopied(false), 2500);
               }}
             />
           </Row>
         </View>
       ) : null}
+    </Card>
+  );
+}
+
+/** Invitation par e-mail : lien personnel à usage unique, valable 7 jours, envoyé par COMPLICE. */
+function EmailInvitePanel({ eventId, isOrganizer, hasBeneficiary, onSent }: { eventId: string; isOrganizer: boolean; hasBeneficiary: boolean; onSent: () => void }) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'participant' | 'co_organizer' | 'beneficiary'>('participant');
+  const [state, setState] = useState<{ tone: 'info' | 'error'; text: string } | null>(null);
+  const [sending, setSending] = useState(false);
+  type EmailRole = 'participant' | 'co_organizer' | 'beneficiary';
+  const roles: EmailRole[] = ['participant', ...(isOrganizer ? (['co_organizer'] as const) : []), ...(!hasBeneficiary ? (['beneficiary'] as const) : [])];
+
+  async function send() {
+    if (sending) return;
+    setState(null);
+    if (!isEmail(email)) return setState({ tone: 'error', text: 'Adresse e-mail invalide.' });
+    setSending(true);
+    try {
+      const r = await api.inviteByEmail(eventId, email.trim(), role);
+      setState({
+        tone: 'info',
+        text: r.status === 'already_sent' ? 'Une invitation est déjà partie vers cette adresse il y a moins d’une heure.' : `Invitation en route vers ${email.trim()}. Le lien est valable 7 jours, pour une seule personne.`,
+      });
+      if (r.status === 'queued') setEmail('');
+      onSent();
+    } catch (e) {
+      const code = e instanceof ApiError ? e.code : '';
+      setState({ tone: 'error', text: code === 'network' ? 'Connexion impossible. Vérifie ton réseau et réessaie.' : messageFor(code || e) });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <Card style={{ gap: space.md }}>
+      <Row gap={space.sm}>
+        <Mail size={22} color={colors.violet} strokeWidth={1.75} />
+        <T v="h3">Inviter par e-mail</T>
+      </Row>
+      <Field label="Adresse e-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder="ami@exemple.fr" onSubmitEditing={send} />
+      <Row gap={space.sm} style={{ flexWrap: 'wrap' }}>
+        {roles.map((r) => (
+          <Choice key={r} label={ROLE_LABELS[r]} selected={role === r} onPress={() => setRole(r)} />
+        ))}
+      </Row>
+      {state ? <Banner tone={state.tone}>{state.text}</Banner> : null}
+      <Button label="Envoyer l’invitation" variant="outline" onPress={send} loading={sending} />
+      <T v="small" color={colors.inkSoft}>
+        L’adresse sert uniquement à cet envoi. Aucun compte n’est créé sans l’accord de la personne.
+      </T>
     </Card>
   );
 }

@@ -1,18 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { MailCheck } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { BackHeader } from '@/components/back-header';
 import { Banner, Button, Field, Screen, T } from '@/components/ui';
 import { authRedirectUrl, useAuth } from '@/lib/auth';
 import { authErrorMessage } from '@/lib/auth-errors';
+import { peekPendingInvite } from '@/lib/pending-invite';
 import { supabase } from '@/lib/supabase';
 import { colors, space } from '@/theme/tokens';
+
+/** Délai entre deux envois (Supabase limite aussi côté serveur). */
+const RESEND_DELAY_S = 60;
 
 /**
  * Validation de l'adresse e-mail ou du code de réinitialisation.
  * Deux voies : le lien de l'e-mail (ouvre auth/callback) ou le code à 6 chiffres
- * (fonctionne même sans lien profond, utile en Expo Go).
+ * (fonctionne même sans lien profond, utile en Expo Go ou sur un autre appareil).
  */
 export default function Verify() {
   const { email = '', type = 'signup' } = useLocalSearchParams<{ email?: string; type?: 'signup' | 'recovery' }>();
@@ -22,8 +26,17 @@ export default function Verify() {
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  // L'e-mail vient de partir : premier renvoi possible dans une minute.
+  const [wait, setWait] = useState(RESEND_DELAY_S);
+
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
 
   async function verify() {
+    if (loading) return;
     setError(null);
     if (!/^\d{6,8}$/.test(code.trim())) return setError('Le code contient 6 chiffres.');
     setLoading(true);
@@ -35,19 +48,24 @@ export default function Verify() {
       return setError(authErrorMessage(err));
     }
     if (type === 'recovery') router.replace('/reset-password');
-    // signup : la session est créée, le layout (auth) redirige.
+    // signup : la session est créée, le layout (auth) redirige vers l'invitation en attente ou l'accueil.
   }
 
   async function resend() {
+    if (wait > 0 || resending) return;
     setError(null);
+    setInfo(null);
     setResending(true);
+    const invite = await peekPendingInvite();
     const { error: err } =
       type === 'recovery'
         ? await supabase.auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl() })
-        : await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: authRedirectUrl() } });
+        : await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: authRedirectUrl(invite) } });
     setResending(false);
-    if (err) setError(authErrorMessage(err));
-    else setInfo('Nouvel e-mail envoyé. Pense à vérifier les indésirables.');
+    setWait(RESEND_DELAY_S);
+    // Même message que l'adresse corresponde ou non à un compte.
+    if (err && !/not found|no user/i.test(err.message)) setError(authErrorMessage(err));
+    else setInfo('Si l’adresse est correcte, un nouvel e-mail vient de partir. Pense à regarder dans les indésirables.');
   }
 
   return (
@@ -57,13 +75,20 @@ export default function Verify() {
         <MailCheck size={56} color={colors.violet} strokeWidth={1.5} />
       </View>
       <T color={colors.inkSoft}>
-        Nous avons envoyé un message à <T v="bodyBold">{email || 'ton adresse'}</T>. Ouvre le lien depuis ce téléphone, ou saisis le code reçu.
+        Si un compte peut être {type === 'recovery' ? 'réinitialisé' : 'activé'} avec <T v="bodyBold">{email || 'ton adresse'}</T>, tu viens de recevoir un e-mail. Ouvre le lien depuis ce téléphone, ou saisis le code reçu.
       </T>
       <Field label="Code reçu par e-mail" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" maxLength={8} placeholder="123456" onSubmitEditing={verify} />
       {error ? <Banner tone="error">{error}</Banner> : null}
       {info ? <Banner tone="info">{info}</Banner> : null}
       <Button label="Valider le code" onPress={verify} loading={loading} />
-      <Button label="Renvoyer l’e-mail" variant="ghost" onPress={resend} loading={resending} disabled={!email} />
+      <Button
+        label={wait > 0 ? `Renvoyer l’e-mail (dans ${wait} s)` : 'Renvoyer l’e-mail'}
+        variant="ghost"
+        onPress={resend}
+        loading={resending}
+        disabled={!email || wait > 0}
+        accessibilityHint="Un nouvel e-mail ne peut être demandé qu’une fois par minute."
+      />
       <Button label="J’ai validé par le lien : me connecter" variant="outline" onPress={() => router.replace({ pathname: '/sign-in', params: { email } })} />
     </Screen>
   );

@@ -9,6 +9,7 @@ import { Loading } from '@/components/states';
 import { Banner, Button, Field, Screen, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { normalizeUrl, useProposals, useSaveProposal } from '@/lib/ideas';
+import { draftKey, useLocalDraft } from '@/lib/local-drafts';
 import { pickImage, uploadImage, type PickedImage } from '@/lib/media';
 import type { ProposalRow } from '@/lib/types';
 import { useEventId } from '@/lib/use-event-context';
@@ -26,10 +27,18 @@ export default function EditIdea() {
 function IdeaForm({ eventId, existing }: { eventId: string; existing: ProposalRow | null }) {
   const { session } = useAuth();
   const save = useSaveProposal(eventId);
-  const [title, setTitle] = useState(existing?.title ?? '');
-  const [price, setPrice] = useState(existing ? String(existing.price_cents / 100).replace('.', ',') : '');
-  const [url, setUrl] = useState(existing?.product_url ?? '');
-  const [description, setDescription] = useState(existing?.description ?? '');
+  // Nouvelle idée : le texte saisi est gardé sur ce téléphone jusqu'à l'envoi (retour arrière accidentel).
+  const draft = useLocalDraft(existing ? null : draftKey(session?.user.id, `idea.${eventId}`), {
+    title: existing?.title ?? '',
+    price: existing ? String(existing.price_cents / 100).replace('.', ',') : '',
+    url: existing?.product_url ?? '',
+    description: existing?.description ?? '',
+  });
+  const { title, price, url, description } = draft.value;
+  const setTitle = (v: string) => draft.update({ title: v });
+  const setPrice = (v: string) => draft.update({ price: v });
+  const setUrl = (v: string) => draft.update({ url: v });
+  const setDescription = (v: string) => draft.update({ description: v });
   const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
   const [picked, setPicked] = useState<PickedImage | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -81,13 +90,23 @@ function IdeaForm({ eventId, existing }: { eventId: string; existing: ProposalRo
           image_path: path,
         },
       },
-      { onSuccess: (newId) => router.replace(`/event/${eventId}/idea/${newId}` as never) },
+      {
+        onSuccess: async (newId) => {
+          await draft.clear();
+          router.replace(`/event/${eventId}/idea/${newId}` as never);
+        },
+      },
     );
   };
 
   return (
     <Screen footer={<Button label={existing ? 'Enregistrer' : 'Proposer cette idée'} loading={uploading || save.isPending} onPress={submit} />}>
       <BackHeader title={existing ? 'Modifier l’idée' : 'Nouvelle idée'} subtitle="Le groupe pourra réagir, commenter et voter." />
+      {draft.hadDraft ? (
+        <Banner tone="info" title="Brouillon retrouvé">
+          Ta saisie précédente a été gardée sur ce téléphone. La photo est à choisir de nouveau.
+        </Banner>
+      ) : null}
       <Field label="Nom du cadeau" value={title} onChangeText={setTitle} placeholder="Platine vinyle" maxLength={80} error={submitted ? errors.title : null} />
       <Field
         label="Prix"

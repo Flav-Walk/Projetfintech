@@ -15,7 +15,12 @@ const STAMP: Record<BadgeKind, { bg: string; fg: string; Icon: LucideIcon }> = {
   host: { bg: '#D6ECFF', fg: '#1F5FA8', Icon: Crown },
 };
 
-export const STAMP_ORDER: BadgeKind[] = ['proposer', 'voter', 'helper', 'wordsmith', 'contributor'];
+/**
+ * Timbres affichés : uniquement des gestes d'organisation (idée, vote, mission, mot).
+ * Le timbre « Complice » (participation) existe en base mais n'est jamais montré : un timbre « à gagner »
+ * en payant serait une pression financière, contraire à la règle du produit (docs/GAMIFICATION.md).
+ */
+export const STAMP_ORDER: BadgeKind[] = ['proposer', 'voter', 'helper', 'wordsmith'];
 
 /**
  * Timbre dentelé : bord perforé dessiné en SVG, pictogramme au centre.

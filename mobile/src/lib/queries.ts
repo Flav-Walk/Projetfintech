@@ -9,7 +9,7 @@ import type {
   VoteVisibility,
 } from '@complice/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import { AppState } from 'react-native';
 import { useAuth } from './auth';
 import { supabase, unwrap } from './supabase';
@@ -144,9 +144,10 @@ export function useActivity(id: string, enabled = true) {
 /** Actualisation en temps réel : chaque changement autorisé par la RLS invalide le cache concerné. */
 export function useEventRealtime(id: string) {
   const qc = useQueryClient();
+  const instance = useId();
   useEffect(() => {
     const channel = supabase
-      .channel(`event:${id}`)
+      .channel(`event:${id}:${instance}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `id=eq.${id}` }, () => {
         qc.invalidateQueries({ queryKey: qk.event(id) });
         qc.invalidateQueries({ queryKey: qk.funding(id) });
@@ -166,7 +167,7 @@ export function useEventRealtime(id: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id, qc]);
+  }, [id, qc, instance]);
 }
 
 export type CreateEventInput = {
@@ -350,10 +351,11 @@ export function useUpdatePrefs() {
 export function useNotifications() {
   const { session } = useAuth();
   const qc = useQueryClient();
+  const instance = useId();
   useEffect(() => {
     if (!session) return;
     const channel = supabase
-      .channel(`notifications:${session.user.id}`)
+      .channel(`notifications:${session.user.id}:${instance}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` }, () =>
         qc.invalidateQueries({ queryKey: qk.notifications }),
       )
@@ -361,7 +363,7 @@ export function useNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session, qc]);
+  }, [session, qc, instance]);
   return useQuery({
     queryKey: qk.notifications,
     enabled: !!session,

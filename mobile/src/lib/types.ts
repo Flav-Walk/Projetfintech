@@ -158,4 +158,14 @@ export interface NotificationPrefs {
   tasks: boolean;
   capsule: boolean;
   messages: boolean;
+  /** Recevoir aussi l'ouverture de la capsule par e-mail (migration 10). */
+  emails: boolean;
+}
+
+export interface ThanksRow {
+  event_id: string;
+  author_id: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
 }

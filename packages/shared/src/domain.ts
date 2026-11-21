@@ -142,7 +142,7 @@ export interface ContributionResponse {
 
 export type ProposalStatus = 'active' | 'withdrawn' | 'unavailable';
 export type CapsuleStatus = 'draft' | 'published';
-export type NotificationKind = 'invitation' | 'vote_closing' | 'task_assigned' | 'capsule_open' | 'gift_selected' | 'member_joined' | 'message';
+export type NotificationKind = 'invitation' | 'vote_closing' | 'task_assigned' | 'capsule_open' | 'gift_selected' | 'member_joined' | 'message' | 'thanks';
 
 /** Réactions autorisées par la base (proposal_reactions.emoji). */
 export const REACTIONS = ['❤️', '😍', '😂', '🤔', '👎'] as const;

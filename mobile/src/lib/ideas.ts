@@ -1,7 +1,8 @@
 import type { ProposalStatus } from '@complice/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import { useAuth } from './auth';
+import { hapticSuccess, hapticTap } from './haptics';
 import { qk } from './queries';
 import { supabase, unwrap } from './supabase';
 import type { CommentRow, ProposalRow, RankingRow, ReactionRow } from './types';
@@ -79,9 +80,10 @@ export function useComments(proposalId: string) {
 /** Résultats en direct : vote_count change sur proposals à chaque voix (publication Realtime). */
 export function useIdeasRealtime(eventId: string) {
   const qc = useQueryClient();
+  const instance = useId();
   useEffect(() => {
     const channel = supabase
-      .channel(`ideas:${eventId}`)
+      .channel(`ideas:${eventId}:${instance}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'proposals', filter: `event_id=eq.${eventId}` }, () => {
         qc.invalidateQueries({ queryKey: ideasKeys.proposals(eventId) });
         qc.invalidateQueries({ queryKey: ideasKeys.ranking(eventId) });
@@ -90,7 +92,7 @@ export function useIdeasRealtime(eventId: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [eventId, qc]);
+  }, [eventId, qc, instance]);
 }
 
 function useInvalidateIdeas(eventId: string) {
@@ -155,6 +157,7 @@ export function useCastVote(eventId: string) {
       return { prev };
     },
     onError: (_e, _v, ctx) => qc.setQueryData(ideasKeys.myVote(eventId), ctx?.prev ?? null),
+    onSuccess: (_d, proposalId) => (proposalId ? hapticSuccess() : hapticTap()),
     onSettled: invalidate,
   });
 }

@@ -13,7 +13,8 @@ import { Mascot } from '@/components/mascot';
 import { ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Chip, Row, T } from '@/components/ui';
 import { activityLabel, formatEventDate, timeAgo, timeUntil } from '@/lib/format';
-import { useActivity, useEvent, useEventRealtime, useFunding, useMembers, useProgress } from '@/lib/queries';
+import { useActivity, useEvent, useEventRealtime, useFunding, useMembers, useProgress, useRevealedGift } from '@/lib/queries';
+import { useTasks } from '@/lib/tasks';
 import { useEventId } from '@/lib/use-event-context';
 import { useNow } from '@/lib/use-now';
 import { colors, gutter, space } from '@/theme/tokens';
@@ -22,7 +23,8 @@ const NEXT: Record<NextAction, { title: string; label: string; route: string }> 
   invite: { title: 'Invite le groupe', label: 'Partager le lien', route: 'members' },
   vote: { title: 'Voter pour le cadeau', label: 'Voir les idées', route: 'ideas' },
   select_gift: { title: 'Choisir le cadeau retenu', label: 'Voir le classement', route: 'ideas' },
-  contribute: { title: 'Participer à la cagnotte', label: 'Participer', route: 'contribute' },
+  // Formulation neutre : participer reste libre, sans montant suggéré ni rappel insistant.
+  contribute: { title: 'La cagnotte est ouverte', label: 'Voir la cagnotte', route: 'contribute' },
   finish_task: { title: 'Terminer ta mission', label: 'Mes missions', route: 'missions' },
   write_capsule: { title: 'Écrire ton mot pour la capsule', label: 'Écrire', route: 'capsule' },
   wait_reveal: { title: 'Tout est prêt, rendez-vous le jour J', label: 'Voir la capsule', route: 'capsule' },
@@ -41,6 +43,9 @@ export default function EventHome() {
   const isBeneficiary = progress.data?.my_role === 'beneficiary';
   const funding = useFunding(id, !!progress.data && !isBeneficiary);
   const activity = useActivity(id, !!progress.data && !isBeneficiary);
+  const gift = useRevealedGift(id, !!progress.data && !isBeneficiary);
+  const tasks = useTasks(id, !!progress.data && !isBeneficiary);
+  const myOpenTasks = (tasks.data ?? []).filter((t) => t.assignee_id === session?.user.id && t.status === 'claimed').length;
 
   if (event.isPending || progress.isPending) return <Loading />;
   if (event.isError) return <SafeAreaView style={{ flex: 1 }}><ErrorState error={event.error} onRetry={() => event.refetch()} /></SafeAreaView>;
@@ -172,7 +177,27 @@ export default function EventHome() {
             <HelpCard eventId={id} me={session?.user.id} members={preparers} />
 
             <Card style={{ gap: space.md }}>
-              <T v="h3">Dates importantes</T>
+              <T v="h3">Récapitulatif</T>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <T v="small" color={colors.inkSoft}>
+                  Cadeau retenu
+                </T>
+                <Pressable accessibilityRole="link" onPress={() => go('ideas')} style={{ flexShrink: 1 }}>
+                  <T v="label" color={gift.data ? colors.ink : colors.inkSoft} numberOfLines={1}>
+                    {gift.data ? gift.data.title : p.votes_open ? 'vote en cours' : 'à choisir'}
+                  </T>
+                </Pressable>
+              </Row>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <T v="small" color={colors.inkSoft}>
+                  Mes missions en cours
+                </T>
+                <Pressable accessibilityRole="link" onPress={() => go('missions')}>
+                  <T v="label">
+                    {myOpenTasks === 0 ? 'aucune' : `${myOpenTasks}`} · {p.tasks_done}/{p.tasks_total} faites au total
+                  </T>
+                </Pressable>
+              </Row>
               <DateLine label="Fin du vote" iso={e.votes_close_at} tz={e.timezone} />
               <DateLine label="Fin des participations" iso={e.contributions_close_at} tz={e.timezone} />
               <DateLine label="Remise du cadeau" iso={e.gift_at} tz={e.timezone} />
@@ -225,7 +250,7 @@ function HelpCard({ eventId, me, members }: { eventId: string; me?: string; memb
     if (!byUser.has(b.user_id)) byUser.set(b.user_id, new Set());
     byUser.get(b.user_id)!.add(b.badge);
   }
-  const mine = byUser.get(me ?? '') ?? new Set<BadgeKind>();
+  const mine = new Set([...(byUser.get(me ?? '') ?? [])].filter((b) => STAMP_ORDER.includes(b)));
   const others = members.filter((m) => m.user_id !== me && (byUser.get(m.user_id)?.size ?? 0) > 0);
   return (
     <Card style={{ gap: space.md }}>

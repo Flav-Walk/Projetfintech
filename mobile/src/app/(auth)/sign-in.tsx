@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Lock, Mail } from 'lucide-react-native';
+import { Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { BackHeader } from '@/components/back-header';
+import { PasswordField } from '@/components/password-field';
 import { Banner, Button, Field, Row, Screen, T } from '@/components/ui';
 import { authErrorMessage, isEmail } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
@@ -17,12 +18,13 @@ export default function SignIn() {
   const [unconfirmed, setUnconfirmed] = useState(false);
 
   async function submit() {
+    if (loading) return;
     setError(null);
     setUnconfirmed(false);
     if (!isEmail(email)) return setError('Saisis une adresse e-mail valide.');
     if (password.length < 1) return setError('Saisis ton mot de passe.');
     setLoading(true);
-    const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     setLoading(false);
     if (err) {
       if (/not confirmed/i.test(err.message)) setUnconfirmed(true);
@@ -36,7 +38,7 @@ export default function SignIn() {
       <BackHeader title="Se connecter" fallback="/welcome" />
       {params.notice === 'password-updated' ? <Banner tone="info">Mot de passe mis à jour. Connecte-toi avec le nouveau.</Banner> : null}
       <Field label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" placeholder="toi@exemple.fr" icon={<Mail size={20} color={colors.inkSoft} strokeWidth={1.75} />} />
-      <Field label="Mot de passe" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" textContentType="password" onSubmitEditing={submit} icon={<Lock size={20} color={colors.inkSoft} strokeWidth={1.75} />} />
+      <PasswordField value={password} onChangeText={setPassword} autoComplete="current-password" textContentType="password" onSubmitEditing={submit} />
       {error ? <Banner tone="error">{error}</Banner> : null}
       {unconfirmed ? (
         <Button label="Saisir le code de confirmation" variant="outline" onPress={() => router.push({ pathname: '/verify', params: { email: email.trim(), type: 'signup' } })} />

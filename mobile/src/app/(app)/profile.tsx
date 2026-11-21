@@ -8,10 +8,9 @@ import { ConfirmButton } from '@/components/confirm-button';
 import { Avatar } from '@/components/event-parts';
 import { Banner, Button, Card, Field, Row, Screen, T } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { signOutAfterDeletion, signOutEverywhere, useAuth } from '@/lib/auth';
 import { isApiConfigured } from '@/lib/env';
 import { usePrefs, useProfile, useUpdatePrefs, useUpdateProfile } from '@/lib/queries';
-import { supabase } from '@/lib/supabase';
 import type { NotificationPrefs } from '@/lib/types';
 import { colors, space } from '@/theme/tokens';
 
@@ -21,6 +20,7 @@ const PREFS: { key: keyof Omit<NotificationPrefs, 'user_id'>; label: string; hin
   { key: 'tasks', label: 'Missions', hint: 'Quand une mission t’est attribuée.' },
   { key: 'capsule', label: 'Capsule', hint: 'Ouverture de la capsule.' },
   { key: 'messages', label: 'Discussion', hint: 'Nouveaux messages (désactivé par défaut).' },
+  { key: 'emails', label: 'Aussi par e-mail', hint: 'L’ouverture de la capsule t’est aussi annoncée par e-mail. Jamais de publicité.' },
 ];
 
 export default function ProfileScreen() {
@@ -33,6 +33,7 @@ export default function ProfileScreen() {
   const name = draft ?? profile.data?.display_name ?? '';
   const [msg, setMsg] = useState<{ tone: 'info' | 'error'; text: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   async function saveName() {
     setMsg(null);
@@ -50,7 +51,7 @@ export default function ProfileScreen() {
     setDeleting(true);
     try {
       await api.deleteAccount();
-      await supabase.auth.signOut({ scope: 'local' });
+      await signOutAfterDeletion();
       router.replace('/welcome');
     } catch (e) {
       setDeleting(false);
@@ -121,13 +122,24 @@ export default function ProfileScreen() {
         </T>
       </Card>
 
-      <Button label="Se déconnecter" variant="outline" icon={<LogOut size={20} color={colors.ink} strokeWidth={1.75} />} onPress={() => supabase.auth.signOut()} />
+      <Button
+        label="Se déconnecter"
+        variant="outline"
+        icon={<LogOut size={20} color={colors.ink} strokeWidth={1.75} />}
+        loading={signingOut}
+        onPress={async () => {
+          setSigningOut(true);
+          await signOutEverywhere();
+        }}
+        accessibilityHint="Les brouillons enregistrés sur ce téléphone sont effacés."
+      />
       <Card style={{ gap: space.sm, borderColor: colors.dangerSoft }}>
         <T v="h3" color={colors.danger}>
           Supprimer mon compte
         </T>
         <T v="small" color={colors.inkSoft}>
-          Action définitive.{!isApiConfigured ? ' Nécessite le serveur Complice (non configuré dans cette version).' : ''}
+          Action définitive et immédiate : ton profil, tes mots, tes photos et tes brouillons sont effacés ; tu perds l’accès à tes groupes. Tes participations restent comptées dans les cagnottes, sans ton nom. Aucune autre étape ne te sera demandée.
+          {!isApiConfigured ? ' Nécessite le serveur Complice (non configuré dans cette version).' : ''}
         </T>
         <ConfirmButton label="Supprimer mon compte" confirmLabel="Confirmer : supprimer définitivement" loading={deleting} onConfirm={deleteAccount} />
       </Card>
