@@ -2,6 +2,7 @@ import {
   CONTRIBUTION_MAX_CENTS,
   CONTRIBUTION_MIN_CENTS,
   formatCents,
+  fundingStepLabel,
   messageFor,
   SIMULATED_FEE_CENTS,
   SUGGESTED_AMOUNTS_CENTS,
@@ -171,7 +172,7 @@ export default function Contribute() {
 
       {step === 'amount' ? (
         <>
-          {funding.data ? <FundingCard collected={funding.data.collected_cents} target={funding.data.target_cents} contributors={funding.data.contributor_count} /> : null}
+          {funding.data ? <FundingCard funding={funding.data} /> : null}
           {!open ? (
             <Banner tone="info" title="Participations closes">
               {`Les participations étaient ouvertes jusqu’au ${formatEventDate(e.contributions_close_at, e.timezone)}.`}
@@ -223,7 +224,7 @@ export default function Contribute() {
                 placeholder="25"
                 suffix="€"
                 error={amountError}
-                hint={`Entre ${formatCents(CONTRIBUTION_MIN_CENTS)} et ${formatCents(CONTRIBUTION_MAX_CENTS)}. Ton montant reste privé : le groupe voit seulement le total.`}
+                hint={`Entre ${formatCents(CONTRIBUTION_MIN_CENTS)} et ${formatCents(CONTRIBUTION_MAX_CENTS)}. Ton montant reste privé : le groupe voit seulement la progression par paliers.`}
               />
             </>
           )}
@@ -239,7 +240,8 @@ export default function Contribute() {
             <RecapLine label="Total" value={formatCents(cents + SIMULATED_FEE_CENTS, { forceDecimals: true })} strong />
           </Card>
           <Banner tone="info" icon={<ShieldCheck size={22} color={colors.violet} />}>
-            Ton montant n’est visible que par toi. Le groupe voit le total et le nombre de participations.
+            Ton montant n’est visible que par toi. Le groupe voit la progression de la cagnotte par paliers, et le fil
+            annonce une nouvelle participation sans dire de qui. Dans un très petit groupe, des recoupements restent possibles.
           </Banner>
           <Card tone="soft">
             <Row style={{ justifyContent: 'space-between' }}>
@@ -281,7 +283,7 @@ export default function Contribute() {
             </T>
             {funding.data ? (
               <T v="small" color={colors.inkSoft} style={{ textAlign: 'center' }}>
-                La cagnotte atteint {formatCents(funding.data.collected_cents)} sur {formatCents(funding.data.target_cents)}.
+                Cagnotte : {fundingStepLabel(funding.data.progress_step, funding.data.goal_reached).toLowerCase()}.
               </T>
             ) : null}
           </Card>

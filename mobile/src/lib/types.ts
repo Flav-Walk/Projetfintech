@@ -9,9 +9,8 @@ export interface EventRow {
   occasion: string;
   description: string | null;
   cover_path: string | null;
-  target_cents: number;
   currency: 'EUR';
-  collected_cents: number;
+  // Aucun montant ici : objectif et total sont dans event_finances (migration 8), lus via event_funding.
   gift_at: string;
   votes_close_at: string;
   contributions_close_at: string;

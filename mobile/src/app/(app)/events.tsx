@@ -1,4 +1,4 @@
-import { formatCents, progressPercent, ROLE_LABELS } from '@complice/shared';
+import { fundingStepLabel, ROLE_LABELS, type EventFundingSummary } from '@complice/shared';
 import { router } from 'expo-router';
 import { Bell, CalendarDays, Link2, Plus, UserRound } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
@@ -9,12 +9,13 @@ import { Logo } from '@/components/mascot';
 import { EmptyState, ErrorState, Loading } from '@/components/states';
 import { Button, Card, Chip, ProgressBar, Row, T } from '@/components/ui';
 import { formatEventDate } from '@/lib/format';
-import { useMyEvents, useNotifications, useProfile, type MyEvent } from '@/lib/queries';
+import { useMyEvents, useMyEventsFunding, useNotifications, useProfile, type MyEvent } from '@/lib/queries';
 import { useNow } from '@/lib/use-now';
 import { colors, gutter, space } from '@/theme/tokens';
 
 export default function MyEvents() {
   const events = useMyEvents();
+  const funding = useMyEventsFunding();
   const profile = useProfile();
   const notifications = useNotifications();
   const [tab, setTab] = useState<'current' | 'memories'>('current');
@@ -32,7 +33,7 @@ export default function MyEvents() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView
         contentContainerStyle={{ padding: gutter, gap: space.lg, paddingBottom: 120 }}
-        refreshControl={<RefreshControl refreshing={events.isRefetching} onRefresh={() => void events.refetch()} tintColor={colors.coral} />}
+        refreshControl={<RefreshControl refreshing={events.isRefetching} onRefresh={() => (void events.refetch(), void funding.refetch())} tintColor={colors.coral} />}
       >
         <Row style={{ justifyContent: 'space-between' }}>
           <Logo size="sm" />
@@ -78,7 +79,7 @@ export default function MyEvents() {
             <EmptyState title="Pas encore de souvenirs" text="Après l’ouverture de la capsule, l’événement apparaîtra ici avec ses messages." />
           )
         ) : (
-          shown.map((e) => <EventCard key={e.event.id} item={e} />)
+          shown.map((e) => <EventCard key={e.event.id} item={e} funding={funding.data?.get(e.event.id)} />)
         )}
       </ScrollView>
 
@@ -97,11 +98,16 @@ export default function MyEvents() {
   );
 }
 
-function EventCard({ item }: { item: MyEvent }) {
+function EventCard({ item, funding }: { item: MyEvent; funding?: EventFundingSummary }) {
   const e = item.event;
-  const pct = progressPercent(e.collected_cents, e.target_cents);
+  const step = funding ? (funding.goal_reached ? 100 : funding.progress_step) : null;
+  const label = funding ? fundingStepLabel(funding.progress_step, funding.goal_reached) : null;
   return (
-    <Card onPress={() => router.push({ pathname: '/event/[id]', params: { id: e.id } })} accessibilityLabel={`${e.title}, ${pct} % collectés`} style={{ gap: space.md }}>
+    <Card
+      onPress={() => router.push({ pathname: '/event/[id]', params: { id: e.id } })}
+      accessibilityLabel={label ? `${e.title}, cagnotte : ${label.toLowerCase()}` : e.title}
+      style={{ gap: space.md }}
+    >
       <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <T v="h3" style={{ flex: 1 }}>
           {e.title}
@@ -115,17 +121,12 @@ function EventCard({ item }: { item: MyEvent }) {
         </T>
         {e.is_demo ? <Chip label="Démo" tone="sun" /> : null}
       </Row>
-      {item.role !== 'beneficiary' ? (
+      {item.role !== 'beneficiary' && step !== null && label ? (
         <View style={{ gap: 6 }}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <T v="label">
-              {formatCents(e.collected_cents)} <T v="small" color={colors.inkSoft}>/ {formatCents(e.target_cents)}</T>
-            </T>
-            <T v="label" color={colors.coralDark}>
-              {pct} %
-            </T>
-          </Row>
-          <ProgressBar value={pct} height={8} label={`Cagnotte ${pct} %`} />
+          <T v="label" color={colors.coralDark}>
+            {label}
+          </T>
+          <ProgressBar value={step} height={8} label={`Cagnotte : ${label.toLowerCase()}`} />
         </View>
       ) : null}
     </Card>

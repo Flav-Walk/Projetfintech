@@ -8,7 +8,7 @@ import { DateField } from '@/components/date-field';
 import { ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Field, Row, Screen, T } from '@/components/ui';
 import { formatEventDate } from '@/lib/format';
-import { useEvent, useProgress, useUpdateEvent, type EventSettingsPatch } from '@/lib/queries';
+import { useEvent, useFunding, useProgress, useSetEventTarget, useUpdateEvent, type EventSettingsPatch } from '@/lib/queries';
 import type { EventRow } from '@/lib/types';
 import { useEventId } from '@/lib/use-event-context';
 import { useNow } from '@/lib/use-now';
@@ -18,10 +18,13 @@ export default function EventSettings() {
   const id = useEventId();
   const event = useEvent(id);
   const progress = useProgress(id);
-
-  if (event.isPending || progress.isPending) return <Loading />;
-  if (event.isError || !event.data) return <Screen><ErrorState error={event.error ?? 'forbidden'} onRetry={() => event.refetch()} /></Screen>;
   const isManager = progress.data?.my_role === 'organizer' || progress.data?.my_role === 'co_organizer';
+  // L'objectif n'est plus dans events : il vient d'event_funding (réservé aux préparateurs).
+  const funding = useFunding(id, isManager);
+
+  if (event.isPending || progress.isPending || (isManager && funding.isPending)) return <Loading />;
+  if (event.isError || !event.data) return <Screen><ErrorState error={event.error ?? 'forbidden'} onRetry={() => event.refetch()} /></Screen>;
+  if (isManager && (funding.isError || !funding.data)) return <Screen><ErrorState error={funding.error ?? 'forbidden'} onRetry={() => funding.refetch()} /></Screen>;
   if (!isManager) {
     return (
       <Screen>
@@ -31,16 +34,17 @@ export default function EventSettings() {
     );
   }
   // La clé réinitialise le formulaire si l'événement est modifié ailleurs (temps réel).
-  return <SettingsForm key={event.data.id + event.data.status} e={event.data} />;
+  return <SettingsForm key={event.data.id + event.data.status} e={event.data} targetCents={funding.data!.target_cents} />;
 }
 
-function SettingsForm({ e }: { e: EventRow }) {
+function SettingsForm({ e, targetCents }: { e: EventRow; targetCents: number }) {
   const update = useUpdateEvent(e.id);
+  const setEventTarget = useSetEventTarget(e.id);
   const now = useNow();
   const [title, setTitle] = useState(e.title);
   const [beneficiary, setBeneficiary] = useState(e.beneficiary_name);
   const [description, setDescription] = useState(e.description ?? '');
-  const [target, setTarget] = useState(String(e.target_cents / 100).replace('.', ','));
+  const [target, setTarget] = useState(String(targetCents / 100).replace('.', ','));
   const [publicVotes, setPublicVotes] = useState(e.vote_visibility === 'public');
   const [dates, setDates] = useState(() => ({
     gift: new Date(e.gift_at),
@@ -61,7 +65,7 @@ function SettingsForm({ e }: { e: EventRow }) {
   async function save() {
     setError(null);
     setSaved(false);
-    const cents = parseAmountToCents(target);
+    const cents = locked.contrib ? targetCents : parseAmountToCents(target);
     if (cents === null || cents < TARGET_MIN_CENTS || cents > TARGET_MAX_CENTS) return setError(`Objectif entre ${formatCents(TARGET_MIN_CENTS)} et ${formatCents(TARGET_MAX_CENTS)}.`);
     if (title.trim().length < 2) return setError('Le titre est trop court.');
     if (!beneficiary.trim()) return setError('Indique la personne fêtée.');
@@ -70,7 +74,6 @@ function SettingsForm({ e }: { e: EventRow }) {
       title: title.trim(),
       beneficiary_name: beneficiary.trim(),
       description: description.trim() || null,
-      target_cents: cents,
       vote_visibility: publicVotes ? 'public' : 'private',
       gift_at: dates.gift.toISOString(),
     };
@@ -80,6 +83,7 @@ function SettingsForm({ e }: { e: EventRow }) {
     if (!locked.reveal) patch.reveal_at = dates.reveal.toISOString();
     try {
       await update.mutateAsync(patch);
+      if (cents !== targetCents) await setEventTarget.mutateAsync(cents);
       setSaved(true);
     } catch (err) {
       setError(messageFor(err));
@@ -87,7 +91,7 @@ function SettingsForm({ e }: { e: EventRow }) {
   }
 
   return (
-    <Screen footer={!frozen ? <Button label="Enregistrer" onPress={save} loading={update.isPending} /> : undefined}>
+    <Screen footer={!frozen ? <Button label="Enregistrer" onPress={save} loading={update.isPending || setEventTarget.isPending} /> : undefined}>
       <BackHeader title="Réglages" subtitle={e.title} fallback={`/event/${e.id}`} />
       {frozen ? <Banner tone="info">Événement terminé : les réglages sont figés.</Banner> : null}
       {saved ? <Banner tone="info">Réglages enregistrés.</Banner> : null}
@@ -95,7 +99,15 @@ function SettingsForm({ e }: { e: EventRow }) {
       <Field label="Titre" value={title} onChangeText={setTitle} maxLength={80} editable={!frozen} />
       <Field label="Personne fêtée" value={beneficiary} onChangeText={setBeneficiary} maxLength={60} editable={!frozen} />
       <Field label="Description" value={description} onChangeText={setDescription} multiline maxLength={600} editable={!frozen} />
-      <Field label="Objectif" value={target} onChangeText={setTarget} keyboardType="decimal-pad" suffix="€" editable={!frozen} />
+      <Field
+        label="Objectif"
+        value={target}
+        onChangeText={setTarget}
+        keyboardType="decimal-pad"
+        suffix="€"
+        editable={!frozen && !locked.contrib}
+        hint={locked.contrib ? 'Participations closes : l’objectif ne change plus.' : undefined}
+      />
       <Card style={{ gap: space.sm }}>
         <Row style={{ justifyContent: 'space-between' }}>
           <T v="bodyBold" style={{ flex: 1 }}>

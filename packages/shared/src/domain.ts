@@ -104,7 +104,8 @@ export interface RevealedGift {
 
 export interface InvitationPreview {
   status: import('./errors.js').InvitationStatus;
-  event_id?: string;
+  /** Absent pour un lien inutilisable ; nul pour un visiteur non connecté. */
+  event_id?: string | null;
   title?: string;
   beneficiary_name?: string;
   occasion?: string;

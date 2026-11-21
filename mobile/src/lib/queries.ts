@@ -1,4 +1,13 @@
-import type { EventFunding, EventProgress, InvitationPreview, InvitationStatus, MemberRole, VoteVisibility } from '@complice/shared';
+import type {
+  EventFunding,
+  EventFundingSummary,
+  EventProgress,
+  InvitationPreview,
+  InvitationStatus,
+  MemberRole,
+  RevealedGift,
+  VoteVisibility,
+} from '@complice/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
@@ -8,6 +17,8 @@ import type { ActivityRow, EventRow, InvitationRow, MemberRow, NotificationPrefs
 
 export const qk = {
   myEvents: ['my-events'] as const,
+  myFunding: ['my-events', 'funding'] as const,
+  gift: (id: string) => ['event', id, 'gift'] as const,
   event: (id: string) => ['event', id] as const,
   members: (id: string) => ['event', id, 'members'] as const,
   progress: (id: string) => ['event', id, 'progress'] as const,
@@ -81,6 +92,39 @@ export function useFunding(id: string, enabled = true) {
   });
 }
 
+/** Paliers de cagnotte de mes événements (jamais de montant) : liste « Mes événements ». */
+export function useMyEventsFunding() {
+  const { session } = useAuth();
+  return useQuery({
+    queryKey: qk.myFunding,
+    enabled: !!session,
+    queryFn: async () => {
+      const rows = unwrap(await supabase.rpc('my_events_funding')) as EventFundingSummary[];
+      return new Map(rows.map((r) => [r.event_id, r]));
+    },
+  });
+}
+
+/** Cadeau retenu, sans prix ni lien : ce que voit le bénéficiaire après l'ouverture. */
+export function useRevealedGift(id: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.gift(id),
+    enabled,
+    queryFn: async () => unwrap(await supabase.rpc('revealed_gift', { p_event: id })) as RevealedGift | null,
+  });
+}
+
+export function useSetEventTarget(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (targetCents: number) => unwrap(await supabase.rpc('set_event_target', { p_event: id, p_target_cents: targetCents })),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.funding(id) });
+      qc.invalidateQueries({ queryKey: qk.myFunding });
+    },
+  });
+}
+
 export function useActivity(id: string, enabled = true) {
   return useQuery({
     queryKey: qk.activity(id),
@@ -112,9 +156,11 @@ export function useEventRealtime(id: string) {
         qc.invalidateQueries({ queryKey: qk.members(id) });
         qc.invalidateQueries({ queryKey: qk.progress(id) });
       })
+      // Une nouvelle participation n'apparaît que comme activité anonyme : on relit alors le palier.
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity', filter: `event_id=eq.${id}` }, () => {
         qc.invalidateQueries({ queryKey: qk.activity(id) });
         qc.invalidateQueries({ queryKey: qk.progress(id) });
+        qc.invalidateQueries({ queryKey: qk.funding(id) });
       })
       .subscribe();
     return () => {
@@ -163,7 +209,7 @@ export function useCreateEvent() {
 }
 
 export type EventSettingsPatch = Partial<
-  Pick<EventRow, 'title' | 'beneficiary_name' | 'occasion' | 'description' | 'target_cents' | 'gift_at' | 'votes_close_at' | 'contributions_close_at' | 'reveal_at' | 'vote_visibility'>
+  Pick<EventRow, 'title' | 'beneficiary_name' | 'occasion' | 'description' | 'gift_at' | 'votes_close_at' | 'contributions_close_at' | 'reveal_at' | 'vote_visibility'>
 >;
 
 export function useUpdateEvent(id: string) {
