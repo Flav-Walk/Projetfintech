@@ -46,8 +46,39 @@ progression collective par paliers, aucune donnée financière pour le bénéfic
   (`verify.sql` 11/11, montants repris dans `event_finances`, 0 annonce nominative, relance refusée).
 - **Non vérifié** : rendu des écrans modifiés (aucune base à jour pour les afficher), Realtime distant.
 
+### Parcours distant après migrations 7 et 8 (2026-11-21, `166c5f1`)
+Testé **par script** (API publiques : clé publique Supabase, 4 vrais comptes, API Render `a640951`) :
+**96/96** — création (couverture, 5 missions), invitations (aperçu visiteur sans identifiant, lien
+épuisé muet, participant ne peut pas inviter), idées (photo, compteur forgé refusé), votes (changement,
+confidentialité), choix du cadeau, participations via Render (confirmée, refus simulé, nouvelle
+tentative, requête rejouée sans second débit, paliers, montant personnel, pas de total exact pendant la
+collecte), missions (prise simultanée : un seul gagnant, création directe refusée), discussion (doublon
+et antidatage refusés), **temps réel** (Léa reçoit message et annonces anonymes ; Nora et Camille ne
+reçoivent rien), capsule (scellée), refus pour Nora et Camille avant l'ouverture (14 accès chacun),
+puis après l'ouverture : Camille voit l'événement, le cadeau sans prix, les mots et la photo, aucune
+donnée financière ; capsule non modifiable ; total exact pour l'organisatrice seulement, collecte close ;
+rappel « capsule ouverte ».
+
+Vérifié **dans l'interface** (version web de l'app, Chromium 390×844, données distantes) : 23/24 — liste
+« Mes événements » par paliers, carte de cagnotte, écran Participer, total exact pour l'organisatrice
+collecte close, réglages (objectif), vue de Hugo (palier, sa participation, pas de total), onglet Idées,
+vue de Camille (aucun montant, cadeau sans prix, capsule), événements inaccessibles pour Camille et Nora.
+Échec attendu : appel de l'API Render depuis le navigateur bloqué par CORS (aucune origine web
+autorisée ; sans effet sur l'app native).
+
+Défauts trouvés et corrigés :
+- **Timbre « Complice » annoncé nominativement** dans le fil au moment de chaque participation → migration 9
+  (`fcd3f4b`), **à appliquer**.
+- **Onglet Idées en erreur pour tous** (embarquement `profiles` ambigu pour PostgREST) → relation nommée
+  (`9f11df3`). Les 15 lectures de tables de l'app passent contre l'API réelle.
+
+Non vérifié : app native sur téléphone (clavier, galerie photo, liens), rendu temps réel à l'écran.
+
 ### Bloqué
-- **Migrations 7 et 8 à distance** : l'écriture SQL par Claude est refusée par le classificateur du mode
+- **Render** : sert toujours `a640951` ; aucun push sur `backend` n'a déclenché de déploiement, même
+  ceux qui touchent `packages/shared`. Cause à lire dans le tableau de bord (Events). La version en ligne
+  fonctionne avec la nouvelle base (parcours ci-dessus).
+- **Migrations 7 et 8 à distance** (appliquées par l'utilisateur le 2026-11-21) : l'écriture SQL par Claude est refusée par le classificateur du mode
   automatique (« Undermining Oversight »), refus respecté. Fichier unique à coller dans le SQL Editor :
   `supabase/.bundle/apply-7-8.sql` (régénérer : `npm run db:bundle -- 20261121000700`).
 - Parcours multi-comptes complet, refus d'accès et dévoilement : dès les migrations 7 et 8 appliquées.
