@@ -5,7 +5,6 @@ import { Pressable } from 'react-native';
 import { BackHeader } from '@/components/back-header';
 import { PasswordField } from '@/components/password-field';
 import { Banner, Button, Field, Row, Screen, T } from '@/components/ui';
-import { authRedirectUrl } from '@/lib/auth';
 import { authErrorMessage, isEmail, passwordProblem } from '@/lib/auth-errors';
 import { peekPendingInvite } from '@/lib/pending-invite';
 import { supabase } from '@/lib/supabase';
@@ -33,10 +32,12 @@ export default function SignUp() {
     setErrors(next);
     if (Object.keys(next).length) return;
     setLoading(true);
+    // Confirmation par code saisi dans l'app : aucune adresse de retour (le modèle d'e-mail n'a pas de lien).
+    // L'invitation en cours reste gardée sur le téléphone et sera reprise après la saisie du code.
     const { data, error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
-      options: { data: { display_name: name.trim() }, emailRedirectTo: authRedirectUrl(invite) },
+      options: { data: { display_name: name.trim() } },
     });
     setLoading(false);
     if (error) return setErrors({ form: authErrorMessage(error) });
@@ -50,7 +51,7 @@ export default function SignUp() {
       <BackHeader title="Créer un compte" subtitle="Quelques secondes, et tu pourras préparer le cadeau avec le groupe." fallback="/welcome" />
       {invite ? (
         <Banner tone="info" title="Ton invitation est gardée">
-          Après la confirmation de ton e-mail, tu arriveras directement dans le groupe.
+          Après la saisie du code reçu par e-mail, tu arriveras directement dans le groupe.
         </Banner>
       ) : null}
       <Field label="Prénom ou pseudo" value={name} onChangeText={setName} autoComplete="given-name" textContentType="givenName" placeholder="Léa" error={errors.name} icon={<User size={20} color={colors.inkSoft} strokeWidth={1.75} />} maxLength={40} hint="C’est ce que verra le groupe." />

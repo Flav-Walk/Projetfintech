@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { createClient } from '@supabase/supabase-js';
 import { exchangeAuthCode, isRecoveryCallback, readAuthCallbackUrl } from '../src/lib/auth-callback';
 import { authErrorMessage } from '../src/lib/auth-errors';
+import { classifyOtpError, isPlausibleOtp, normalizeOtp } from '../src/lib/otp';
 import { installPkceCrypto } from '../src/lib/pkce-crypto';
 
 test('PKCE native adapter: Supabase sends S256 for signup and recovery', async () => {
@@ -88,6 +89,36 @@ test('Auth errors are actionable and never expose server internals', () => {
   assert.match(db, /service de comptes/);
   assert.doesNotMatch(db, /relation|secret_table/);
   assert.match(authErrorMessage({ code: 'otp_expired', message: 'Email link is invalid or has expired' }), /expiré/);
+});
+
+test('OTP input: paste-tolerant, length not assumed, errors classified', () => {
+  assert.equal(normalizeOtp('Code : 123 456'), '123456');
+  assert.equal(normalizeOtp('1234-5678'), '12345678');
+  assert.equal(normalizeOtp('12345678901234'), '1234567890');
+  assert.equal(isPlausibleOtp('12345'), false);
+  for (const ok of ['123456', '12345678', '1234567890']) assert.equal(isPlausibleOtp(ok), true, ok);
+  assert.equal(classifyOtpError({ status: 403, code: 'otp_expired', message: 'Token has expired or is invalid' }), 'invalid_or_expired');
+  assert.equal(classifyOtpError({ status: 429, code: 'over_request_rate_limit', message: 'Request rate limit reached' }), 'rate_limited');
+  assert.equal(classifyOtpError({ message: 'Failed to fetch' }), 'network');
+});
+
+test('signup and recovery OTP use Supabase verifyOtp with the right type, no redirect sent', async () => {
+  const requests: { url: string; body: Record<string, unknown> }[] = [];
+  const client = createClient('https://auth.test.local', 'public-test-key', {
+    auth: { flowType: 'pkce', autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    global: { fetch: async (url, init) => {
+      requests.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) });
+      return new Response(JSON.stringify({ code: 'otp_expired', msg: 'Token has expired or is invalid' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    } },
+  });
+  const signup = await client.auth.verifyOtp({ email: 'p@test.local', token: '12345678', type: 'email' });
+  const recovery = await client.auth.verifyOtp({ email: 'p@test.local', token: '123456', type: 'recovery' });
+  assert.equal(classifyOtpError(signup.error), 'invalid_or_expired');
+  assert.equal(recovery.data.session, null, 'no session without a valid code');
+  assert.match(requests[0].url, /\/verify$/);
+  assert.deepEqual([requests[0].body.type, requests[1].body.type], ['email', 'recovery']);
+  await client.auth.resetPasswordForEmail('p@test.local');
+  assert.equal(new URL(requests[2].url).searchParams.get('redirect_to'), null);
 });
 
 test('expired callback fragment and invitation query are both recovered', () => {

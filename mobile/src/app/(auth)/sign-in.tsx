@@ -41,7 +41,7 @@ export default function SignIn() {
       <PasswordField value={password} onChangeText={setPassword} autoComplete="current-password" textContentType="password" onSubmitEditing={submit} />
       {error ? <Banner tone="error">{error}</Banner> : null}
       {unconfirmed ? (
-        <Button label="Saisir le code de confirmation" variant="outline" onPress={() => router.push({ pathname: '/verify', params: { email: email.trim(), type: 'signup' } })} />
+        <Button label="Saisir le code de confirmation" variant="outline" onPress={() => router.push({ pathname: '/verify', params: { email: email.trim().toLowerCase(), type: 'signup', sent: '0' } })} />
       ) : null}
       <Button label="Se connecter" onPress={submit} loading={loading} />
       <Button label="Mot de passe oublié ?" variant="ghost" onPress={() => router.push({ pathname: '/forgot-password', params: { email } })} />

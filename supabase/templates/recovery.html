@@ -1,29 +1,28 @@
 <!doctype html>
 <!--
-  COMPLICE — Supabase Auth > Emails > Templates > « Reset password ».
-  Objet conseillé : Choisis un nouveau mot de passe COMPLICE
-  Variables Supabase : {{ .ConfirmationURL }}, {{ .Token }}.
+  COMPLICE — Supabase > Authentication > Emails > Templates > « Reset password ».
+  Objet : Ton code de réinitialisation COMPLICE
+  Parcours : code saisi dans l'app (écran « Code de réinitialisation »), puis choix du nouveau mot de passe.
+  Aucun lien : {{ .ConfirmationURL }} n'est volontairement pas utilisé.
+  {{ .Token }} : code généré par Supabase ; longueur selon « Email OTP Length » (6 à 10 chiffres).
+  Le code n'est pas mis dans l'objet ici, pour qu'il ne s'affiche pas dans les notifications de l'écran verrouillé.
 -->
 <html lang="fr">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nouveau mot de passe</title></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Réinitialiser ton mot de passe</title></head>
 <body style="margin:0;padding:0;background:#FFF7F2;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF7F2;">
 <tr><td align="center" style="padding:24px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#FFFFFF;border-radius:20px;border:1px solid #F0E6E0;">
 <tr><td style="padding:28px 24px 8px;font-family:Arial,Helvetica,sans-serif;color:#2A1446;">
 <div style="font-size:26px;font-weight:900;letter-spacing:-0.5px;">complice</div>
-<h1 style="font-size:22px;line-height:28px;margin:20px 0 12px;">Nouveau mot de passe</h1>
-<p style="font-size:16px;line-height:24px;margin:0 0 14px;">Tu as demandé à changer ton mot de passe. Ouvre ce lien depuis ton téléphone pour en choisir un nouveau.</p>
+<h1 style="font-size:22px;line-height:28px;margin:20px 0 12px;">Choisir un nouveau mot de passe</h1>
+<p style="font-size:16px;line-height:24px;margin:0 0 14px;">Une réinitialisation a été demandée pour ton compte. Saisis ce code dans l’app COMPLICE, puis choisis ton nouveau mot de passe.</p>
 </td></tr>
-<tr><td align="center" style="padding:8px 24px 16px;">
-<a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#F2553D;color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:700;text-decoration:none;padding:16px 28px;border-radius:16px;">Choisir un nouveau mot de passe</a>
-</td></tr>
-<tr><td style="padding:0 24px 8px;font-family:Arial,Helvetica,sans-serif;color:#2A1446;">
-<p style="font-size:15px;line-height:22px;margin:0 0 8px;">Ou saisis ce code dans l’app :</p>
-<p style="font-size:28px;font-weight:900;letter-spacing:6px;margin:0 0 16px;text-align:center;color:#6A4BF5;">{{ .Token }}</p>
+<tr><td align="center" style="padding:4px 24px 20px;">
+<div style="display:inline-block;background:#F4F0FF;border-radius:16px;padding:16px 24px;font-family:'Courier New',Courier,monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#2A1446;">{{ .Token }}</div>
 </td></tr>
 <tr><td style="padding:0 24px 24px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:19px;color:#6B5A7E;">
-Tu n’es pas à l’origine de cette demande ? Ignore ce message : ton mot de passe actuel reste valable.
+Ce code est personnel et expire rapidement. Seul le dernier code reçu est valable. Personne de COMPLICE ne te le demandera. Tu n’es pas à l’origine de cette demande ? Ignore ce message : ton mot de passe actuel reste valable.
 </td></tr>
 </table>
 <p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#A99BB8;margin:16px 0 0;">COMPLICE — le cadeau commun qu’on prépare ensemble.</p>

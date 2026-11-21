@@ -21,22 +21,24 @@ Réglages Supabase :
 1. **Authentication > Emails > SMTP Settings** : activer ; hôte `smtp-relay.brevo.com`, port `587` ;
    identifiant = identifiant SMTP Brevo ; mot de passe = clé SMTP Brevo ; expéditeur = adresse validée
    dans Brevo ; nom = `COMPLICE`.
-2. **Authentication > Emails > Templates** :
-   - « Confirm signup » : objet « Confirme ton adresse pour rejoindre COMPLICE », corps = `supabase/templates/confirmation.html` ;
-   - « Reset password » : objet « Choisis un nouveau mot de passe COMPLICE », corps = `supabase/templates/recovery.html`.
-   Les deux contiennent le lien (`{{ .ConfirmationURL }}`) **et** le code (`{{ .Token }}`).
-3. **Authentication > URL Configuration > Redirect URLs** : callbacks précis listés dans
-   [SETUP.md](SETUP.md#auth), pour localhost, l'hôte Expo Go réel et `complice://auth/callback`.
-   Le lien de confirmation ramène sur `/auth/callback`, avec le jeton d'invitation
-   éventuel : la personne arrive directement dans la bonne cagnotte.
-4. **Authentication > Rate Limits** : garder une limite d'envoi raisonnable (l'app impose aussi 60 s
-   entre deux renvois).
+2. **Authentication > Emails > Templates** (parcours par **code saisi dans l'app**, sans lien) :
+   - « Confirm signup » : objet « Ton code de confirmation COMPLICE », corps = `supabase/templates/confirmation.html` ;
+   - « Reset password » : objet « Ton code de réinitialisation COMPLICE », corps = `supabase/templates/recovery.html`.
+   Les deux n'affichent que `{{ .Token }}`. `{{ .ConfirmationURL }}` n'est pas utilisé : il menait vers
+   l'URL du site (localhost en développement).
+3. **Authentication > Sign In / Providers > Email** : « Confirm email » **activé** (ne pas désactiver) ;
+   relever « Email OTP Length » et « Email OTP Expiration ». L'app accepte 6 à 10 chiffres et ne suppose
+   pas la longueur ; garder une expiration courte (3600 s au maximum).
+4. **Authentication > Rate Limits** : « Token verifications » limite les essais de code par IP ;
+   l'app ajoute 5 essais au plus par code, puis exige un nouveau code (60 s entre deux envois).
 
-Expo Go : le lien `exp://…` ne fonctionne que si l'e-mail est ouvert **sur le téléphone qui exécute
-Expo Go**, pendant que le serveur Expo tourne. Sinon, le **code reçu (6 à 8 chiffres)** peut être
-saisi dans l'écran de vérification. Le lien PKCE doit être ouvert sur l'appareil et dans le
-stockage du navigateur qui a initié la demande ; un autre appareil doit utiliser le code.
-Version installable : `complice://auth/callback` ouvre l'app directement.
+Parcours dans l'app (méthodes Supabase natives, aucun code généré par l'API) :
+- inscription : `signUp` → écran du code → `verifyOtp({ type: 'email' })` → session ouverte →
+  reprise de l'invitation gardée sur le téléphone → bonne cagnotte ;
+- mot de passe oublié : `resetPasswordForEmail` → écran du code → `verifyOtp({ type: 'recovery' })` →
+  écran « Nouveau mot de passe » (seul accessible tant que l'indicateur de récupération, gardé sur le
+  téléphone, est actif) → `updateUser({ password })`.
+L'ancien retour par lien (`/auth/callback`, PKCE) reste pris en charge pour les e-mails déjà envoyés.
 
 ## E-mails métier (API + Brevo)
 - File `email_outbox` en base (migration 10), jamais lisible par l'app.

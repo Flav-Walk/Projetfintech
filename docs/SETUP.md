@@ -63,6 +63,10 @@ Lecture publique (`GET /auth/v1/settings`, 2026-11-20) : e-mail activé, inscrip
 Redirect URLs, modèles d'e-mail et SMTP ne sont pas lisibles sans accès administrateur : à contrôler
 dans le tableau de bord.
 
+Depuis le 21/11, inscription et mot de passe oublié se font par **code saisi dans l'app**
+(modèles sans lien, voir [EMAILS.md](EMAILS.md)) : les Redirect URLs ne servent plus à ces parcours.
+Les entrées ci-dessous restent utiles seulement pour d'anciens e-mails contenant un lien.
+
 Authentication > URL Configuration > **Redirect URLs** : autoriser le callback précis,
 avec une deuxième entrée pour son paramètre d'invitation :
 - `http://localhost:8081/auth/callback`
@@ -79,9 +83,8 @@ et `complice://**` après validation des entrées précises. Le wildcard est lim
 du jeton hexadécimal de l'invitation. L'option expérimentale auth-js qui ajoute `sb_flow_id`
 n'est pas activée ; si elle l'est ultérieurement, adapter aussi ces entrées.
 
-Authentication > Email Templates : pour permettre la saisie d'un **code** (utile en Expo Go, où les
-liens s'ouvrent mal), ajouter `{{ .Token }}` dans les modèles « Confirm signup » et « Reset Password »,
-par exemple : `Ton code Complice : {{ .Token }}`.
+Authentication > Email Templates : coller `supabase/templates/confirmation.html` (« Confirm signup »)
+et `recovery.html` (« Reset password ») ; ils n'affichent que le code `{{ .Token }}`.
 
 Le service d'e-mail intégré de Supabase est limité (quelques e-mails par heure) et n'envoie qu'aux
 adresses des membres de l'organisation Supabase. Pour des tests à plusieurs comptes, configurer un SMTP

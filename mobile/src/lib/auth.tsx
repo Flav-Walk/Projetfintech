@@ -1,7 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { clearLocalUserData } from './local-drafts';
 import { supabase } from './supabase';
 
@@ -22,21 +23,44 @@ const AuthContext = createContext<AuthState>({
 
 let voluntarySignOut = false;
 
+/**
+ * Réinitialisation validée par code mais nouveau mot de passe pas encore choisi.
+ * Gardé sur le téléphone : si l'app est fermée entre les deux, elle rouvre l'écran du nouveau mot de passe
+ * au lieu de laisser la session de récupération servir de connexion ordinaire.
+ */
+const RECOVERY_KEY = 'complice.recoveryPending';
+
+async function persistRecovery(on: boolean) {
+  try {
+    if (on) await AsyncStorage.setItem(RECOVERY_KEY, '1');
+    else await AsyncStorage.removeItem(RECOVERY_KEY);
+  } catch {
+    // stockage indisponible : l'état reste en mémoire
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [recovering, setRecovering] = useState(false);
+  const [recovering, setRecoveringState] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const queryClient = useQueryClient();
 
+  const setRecovering = useCallback((v: boolean) => {
+    setRecoveringState(v);
+    void persistRecovery(v);
+  }, []);
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data, error }) => {
+    Promise.all([supabase.auth.getSession(), AsyncStorage.getItem(RECOVERY_KEY).catch(() => null)]).then(([{ data, error }, pending]) => {
       // Jeton de rafraîchissement invalide au démarrage : session locale effacée, message à l'accueil.
       if (error) {
         setSessionExpired(true);
         void supabase.auth.signOut({ scope: 'local' });
       }
       setSession(data.session);
+      if (pending && data.session) setRecoveringState(true);
+      else if (pending) void persistRecovery(false);
       setLoading(false);
     });
     const { data } = supabase.auth.onAuthStateChange((event, next) => {
@@ -49,14 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRecovering(false);
       }
       // Changement d'utilisateur : aucune donnée du compte précédent ne doit rester en cache.
-      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') queryClient.clear();
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') queryClient.clear();
     });
     return () => data.subscription.unsubscribe();
-  }, [queryClient]);
+  }, [queryClient, setRecovering]);
 
   const value = useMemo(
     () => ({ session, loading, recovering, setRecovering, sessionExpired, clearSessionExpired: () => setSessionExpired(false) }),
-    [session, loading, recovering, sessionExpired],
+    [session, loading, recovering, setRecovering, sessionExpired],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

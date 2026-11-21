@@ -10,7 +10,7 @@ export function authErrorMessage(err: { message?: string; status?: number; code?
   if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit') return 'Trop de demandes pour cette adresse. Patiente quelques minutes avant de réessayer.';
   if (code === 'weak_password') return 'Mot de passe trop faible : 8 caractères minimum, avec lettres et chiffres.';
   if (/invalid login credentials/i.test(m)) return 'E-mail ou mot de passe incorrect.';
-  if (/email not confirmed/i.test(m)) return 'Confirme d’abord ton adresse e-mail (lien ou code reçu par e-mail).';
+  if (/email not confirmed/i.test(m)) return 'Confirme d’abord ton adresse e-mail avec le code reçu.';
   if (/password should be at least|weak password/i.test(m)) return 'Mot de passe trop faible : 8 caractères minimum, avec lettres et chiffres.';
   if (/rate limit|too many/i.test(m) || err?.status === 429) return 'Trop de tentatives. Patiente quelques minutes avant de réessayer.';
   if (code === 'otp_expired' || /token has expired|otp.*expired|invalid.*otp|token.*invalid/i.test(m)) return 'Code invalide ou expiré. Demande un nouveau code.';
