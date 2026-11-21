@@ -1,12 +1,13 @@
 # Blueprint Render pour l'API COMPLICE (monorepo : build depuis la racine).
-# Créer le service : Render Dashboard > New > Blueprint > dépôt Flav-Walk/Projetfintech, branche main.
+# Créer le service : Render Dashboard > New > Blueprint > dépôt Flav-Walk/Projetfintech.
+# Branche déployée : backend (main reste la version intégrée et vérifiée).
 services:
   - type: web
     name: complice-api
     runtime: node
     region: frankfurt
     plan: free
-    branch: main
+    branch: backend
     buildCommand: npm ci --include=dev --workspace @complice/shared --workspace backend && npm run build --workspace @complice/shared && npm run build --workspace backend
     startCommand: node backend/dist/server.js
     healthCheckPath: /health
@@ -32,3 +33,11 @@ services:
         value: complice
       - key: PAYMENT_PROVIDER
         value: simulated
+      - key: APP_PUBLIC_URL
+        value: https://complice-api.onrender.com
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_FROM_EMAIL
+        sync: false
+      - key: BREVO_FROM_NAME
+        value: COMPLICE

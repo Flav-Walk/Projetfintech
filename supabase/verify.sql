@@ -2,7 +2,7 @@
 -- Chaque ligne doit afficher ok = true.
 select 'migrations enregistrées' as controle,
        (select count(*) from supabase_migrations.schema_migrations where version like '2026%')::text as valeur,
-       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 9 as ok
+       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 10 as ok
 union all
 select 'tables COMPLICE présentes',
        count(*)::text,
@@ -71,6 +71,17 @@ select 'aucune annonce nominative de contribution (migrations 8 et 9)',
           or (kind = 'badge_awarded' and data->>'badge' = 'contributor'))::text,
        not exists (select 1 from public.activity where (kind = 'contribution_confirmed' and actor_id is not null)
           or (kind = 'badge_awarded' and data->>'badge' = 'contributor'))
+union all
+select 'e-mails et remerciements (migration 10)',
+       case when to_regclass('public.email_outbox') is not null and to_regclass('public.event_thanks') is not null
+             and not has_any_column_privilege('authenticated', 'public.email_outbox', 'select')
+             and has_function_privilege('authenticated', 'public.prepare_email_invitation(uuid, public.member_role, text)', 'execute')
+             and not has_function_privilege('authenticated', 'public.claim_email_batch(integer)', 'execute')
+            then 'conformes' else 'ANOMALIE : appliquer 20261121001000_emails_thanks_templates' end,
+       to_regclass('public.email_outbox') is not null and to_regclass('public.event_thanks') is not null
+         and not has_any_column_privilege('authenticated', 'public.email_outbox', 'select')
+         and has_function_privilege('authenticated', 'public.prepare_email_invitation(uuid, public.member_role, text)', 'execute')
+         and not has_function_privilege('authenticated', 'public.claim_email_batch(integer)', 'execute')
 union all
 select 'aperçu d''invitation ouvert aux visiteurs',
        case when has_function_privilege('anon', 'public.preview_invitation(text)', 'execute') then 'ouvert' else 'fermé' end,

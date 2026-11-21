@@ -13,6 +13,16 @@ const schema = z.object({
   /** Origines autorisées (CORS) séparées par des virgules ; vide = aucune (app mobile native). */
   ALLOWED_ORIGINS: z.string().default(''),
   PAYMENT_PROVIDER: z.enum(['simulated']).default('simulated'),
+  /** URL publique de cette API (liens des e-mails : /i/<jeton>, /e/<événement>). */
+  APP_PUBLIC_URL: z.url().default('https://complice-api.onrender.com'),
+  /**
+   * E-mails métier via l'API Brevo (invitations, ouverture de la capsule). Clé API Brevo (xkeysib-…),
+   * distincte des identifiants SMTP utilisés par Supabase Auth. Absente : aucun e-mail métier.
+   */
+  BREVO_API_KEY: z.string().min(20).optional(),
+  /** Expéditeur validé dans Brevo (Senders, domaine authentifié recommandé). */
+  BREVO_FROM_EMAIL: z.email().optional(),
+  BREVO_FROM_NAME: z.string().min(1).max(60).default('COMPLICE'),
 });
 
 export type Config = z.infer<typeof schema> & { allowedOrigins: string[] };
