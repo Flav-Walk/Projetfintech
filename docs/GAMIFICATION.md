@@ -27,12 +27,28 @@ maximiser le temps passé dans l'app ni les montants versés. Chaque levier ci-d
 | Idées « À découvrir » avant le classement | Le premier en tête capte les voix | Ordre neutre propre à chacun | Votes plus réfléchis ; les nombres de voix restent réels et consultables |
 | Capsule scellée jusqu'à une vraie date | Garder la surprise | Anticipation | Envie d'écrire un mot, découverte marquante |
 | Remerciements du bénéficiaire | Le groupe ne sait pas si le cadeau a plu | Réciprocité, clôture | Fin d'événement positive, souvenir complet |
+| Prochaine étape « pour toi » (migration 11) : inviter → proposer → voter → choisir → finir sa mission → écrire son mot → prendre une mission → cagnotte (en dernier, neutre) | Ne pas savoir par où commencer | Petit engagement, une seule action | L'action change dès qu'elle est faite ; jamais de pression sur l'argent |
+| Préparatifs : compteurs Idées, Missions x/y, Mots scellés x/y | Reconnaissance collective invisible | Progression collective visible | Chacun voit ce qui reste, sans comparaison individuelle |
+| Total de la cagnotte visible (migration 11) | « Où en est la cagnotte ? » | Transparence collective | Le groupe voit le total et le reste ; jamais qui a donné combien |
+| Lecture des mots un par un (capsule ouverte) | Une longue liste dilue l'émotion | Anticipation, révélation progressive | Découverte marquante, page finale de remerciement collectif |
+| Amis et invitations en deux touches | Recopier des liens dans plusieurs messageries | Réseau existant, effort minimal | Groupes formés plus vite ; chacun accepte ou refuse |
+
+## Gestes familiers repris (pas des dark patterns)
+Barre d'onglets avec bouton central « + », tirer pour actualiser, balayer une ligne pour révéler ses actions
+(toujours doublées d'un bouton accessible), pastilles de nouveautés, confirmations brèves avec retour haptique,
+feuilles modales en bas d'écran, lecture « story » des souvenirs. Ces gestes réduisent l'effort ; aucun ne
+pousse à payer, à revenir sans raison, ni ne masque une information.
+
+## Ce qui a été demandé et refusé
+Une demande de « dark patterns » a été formulée le 2026-11-22. Ils ne sont pas implémentés : ils iraient contre
+les règles ci-dessus et contre la confiance attendue d'une app qui manipule de l'argent entre proches
+(pratiques commerciales trompeuses, consentement vicié). Les leviers familiers ci-dessus en tiennent lieu.
 
 ## Dark patterns écartés
 
 | Pratique | Pourquoi elle est tentante | Ce que fait COMPLICE |
 |---|---|---|
-| Afficher qui a donné et combien | « Effet de groupe » sur les montants | Montants privés ; paliers collectifs ; annonces anonymes |
+| Afficher qui a donné et combien | « Effet de groupe » sur les montants | Montants individuels privés ; seul le total est partagé ; annonces anonymes |
 | Timbre ou classement liés à la participation | Augmenter le taux de paiement | Aucun timbre financier visible |
 | Montants suggérés élevés, pré-sélectionnés | Augmenter le panier | Suggestions modestes, rien de présélectionné, montant libre |
 | Frais révélés au dernier moment | Conversion | Frais affichés avant confirmation (0 € en simulation), paiement simulé indiqué avant de confirmer |
@@ -43,6 +59,6 @@ maximiser le temps passé dans l'app ni les montants versés. Chaque levier ci-d
 | Série quotidienne, notification sans objet | Rétention | Aucune |
 
 ## Limites assumées
-- Dans un très petit groupe, des recoupements restent possibles (par exemple, à deux, le palier et son
-  propre montant renseignent sur l'autre). L'app le dit au moment de participer.
+- Le total exact permet des déductions par différence, surtout dans un petit groupe (à deux, le total moins
+  sa propre part donne celle de l'autre). L'app le dit sur la carte de la cagnotte et au moment de participer.
 - Les effets attendus ci-dessus n'ont pas été mesurés.

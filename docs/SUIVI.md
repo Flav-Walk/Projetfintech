@@ -1,5 +1,18 @@
 # Suivi des lots
 
+## Lot 7 — Amis, invitations nominatives, total de cagnotte, refonte (2026-11-22)
+
+- **Base (migration 11, à appliquer : `supabase/.bundle/apply-11.sql`)** : pseudo unique, recherche, amis,
+  blocage, invitations d'amis (rejoindre/refuser), invitation par e-mail liée à l'adresse vérifiée et
+  retrouvée après connexion, surprise du bénéficiaire, total de cagnotte pour les préparateurs, prochaine
+  action enrichie. Règles : [AMIS-INVITATIONS.md](AMIS-INVITATIONS.md).
+- **App** : navigation Accueil · Amis · + · Activité · Profil ; écran Amis (recherche, demandes, balayage) ;
+  invitations reçues et surprise à l'accueil ; feuille « Inviter » (amis, e-mail, lien) et suivi des
+  invitations ; carte cagnotte avec montants ; photo de profil et pseudo ; réactions dessinées ; lecture des
+  mots un par un ; jetons v2, Bricolage Grotesque, mascotte et icône d'app redessinées ([DESIGN.md](../DESIGN.md)).
+- Vérifié : SQL 59 (dont 13 nouveaux, multi-rôles), shared 6, backend 14, mobile 8 ; typage, lint ;
+  exports web et Android. Non vérifié à ce stade : migration distante, captures sur données réelles, téléphone.
+
 ## Cause de l'échec d'inscription (2026-11-21, 19:10)
 
 Logs Auth : `525 5.7.1 Unauthorized IP address` sur chaque `/signup`. La restriction d'IP du compte

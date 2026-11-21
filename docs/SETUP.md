@@ -19,13 +19,12 @@ Option A — un seul copier-coller (recommandé) :
 3. Avec une version de départ, le fichier commence par un garde-fou : il s'arrête sans rien modifier si
    une migration antérieure n'est pas enregistrée, ou si l'une des migrations incluses l'est déjà.
 
-État au 2026-11-21 : migrations 1 à 9 confirmées appliquées. Lors de la reprise Auth,
-`event_thanks.event_id`, `notification_prefs.emails` et `email_outbox.status` sont lisibles
-avec la clé serveur : les objets de la migration 10 sont présents. Son enregistrement et les
-contrôles complets restent à lire dans le SQL Editor avant toute application. Ne pas la rejouer.
-Instructions d'application uniquement si son absence est établie :
-`npm run db:bundle -- 20261121001000`, puis étape 2. Sans elle : pas de remerciements, pas d'e-mails
-métier, préférence « Aussi par e-mail » inopérante, missions par défaut identiques pour toutes les occasions.
+État au 2026-11-22 : migrations 1 à 10 enregistrées et vérifiées à distance (`verify.sql` 13/13).
+**Migration 11 à appliquer** : `npm run db:bundle -- 20261122001100` (déjà produit :
+`supabase/.bundle/apply-11.sql`), puis étape 2 ; résultat attendu « COMPLICE : 11 migrations
+enregistrées ». Elle ajoute un pseudo à chaque profil existant (sans toucher au reste), les tables
+d'amis et d'invitations nominatives, et remplace les fonctions de cagnotte. L'app de la branche `front`
+postérieure au 2026-11-22 **en dépend** (amis, invitations, montants) : l'appliquer avant de l'utiliser.
 
 Privilèges : sur les projets Supabase récents, une nouvelle table du schéma `public` ne donne à `anon`,
 `authenticated` et `service_role` que TRUNCATE, REFERENCES, TRIGGER et MAINTAIN. Toute migration qui
@@ -42,7 +41,7 @@ authentification, puis demander l'application des migrations.
 
 ### Vérification
 
-Coller `supabase/verify.sql` dans le SQL Editor : chaque ligne doit afficher `ok = true` (10 migrations,
+Coller `supabase/verify.sql` dans le SQL Editor : chaque ligne doit afficher `ok = true` (11 migrations,
 17 tables, RLS partout, trigger profil, buckets privés, politiques Storage, 7 tables Realtime, règlement
 fermé aux clients, privilèges de tables conformes, montants hors de `events`, aucune annonce nominative,
 file d'e-mails fermée et remerciements, aperçu d'invitation ouvert). La dernière requête liste la tâche `complice-reminders`.
