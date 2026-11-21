@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAmountToCents, formatCents, progressPercent, validateContribution } from './money.js';
 import { errorCodeFrom } from './errors.js';
+import { fundingStepLabel } from './domain.js';
 
 test('parseAmountToCents', () => {
   assert.equal(parseAmountToCents('15'), 1500);
@@ -35,7 +36,16 @@ test('validateContribution', () => {
   assert.deepEqual(validateContribution('x'), { ok: false, reason: 'format' });
 });
 
+test('fundingStepLabel : paliers, jamais de montant', () => {
+  assert.equal(fundingStepLabel(0, false), 'La cagnotte démarre');
+  assert.equal(fundingStepLabel(50, false), 'Plus de la moitié de l’objectif');
+  assert.equal(fundingStepLabel(100, true), 'Objectif atteint');
+  assert.doesNotMatch(fundingStepLabel(75, false), /€|\d/);
+});
+
 test('errorCodeFrom', () => {
+  assert.equal(errorCodeFrom({ message: 'invalid_target_amount' }), 'invalid_target_amount');
+  assert.equal(errorCodeFrom({ message: 'invalid_target' }), 'invalid_target');
   assert.equal(errorCodeFrom({ message: 'votes_closed' }), 'votes_closed');
   assert.equal(errorCodeFrom(new Error('new row violates row-level security policy')), 'forbidden');
   assert.equal(errorCodeFrom(new TypeError('Network request failed')), 'network');

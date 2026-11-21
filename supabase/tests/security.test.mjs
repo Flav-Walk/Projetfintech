@@ -67,7 +67,8 @@ test('anon ne lit aucune table', async () => {
 
 test('écritures directes interdites sur les tables pilotées par RPC', async () => {
   assert.match(await errorOf(as(db, intrus, `insert into public.event_members (event_id, user_id, role) values ($1, $2, 'organizer')`, [eventId, intrus])), /permission denied/);
-  assert.match(await errorOf(as(db, lea, `update public.events set collected_cents = 99999 where id = $1`, [eventId])), /permission denied/);
+  assert.match(await errorOf(as(db, lea, `update public.event_finances set collected_cents = 99999 where event_id = $1`, [eventId])), /permission denied/);
+  assert.match(await errorOf(as(db, lea, `select * from public.event_finances`)), /permission denied/);
   assert.match(await errorOf(as(db, lea, `update public.events set is_demo = true where id = $1`, [eventId])), /permission denied/);
   assert.match(await errorOf(as(db, sarah, `insert into public.notifications (user_id, kind, dedupe_key) values ($1, 'message', 'x')`, [sarah])), /permission denied/);
 });
@@ -106,9 +107,18 @@ test('invitation : aperçu anonyme, déjà membre, invalide', async () => {
   assert.equal(anonPreview.status, 'valid');
   assert.equal(anonPreview.title, 'Les 25 ans de Camille');
   assert.equal(anonPreview.organizer_name, 'Lea');
+  assert.equal(anonPreview.event_id, null, 'identifiant jamais donné à un visiteur');
   const memberPreview = (await as(db, hugo, `select public.preview_invitation($1) as p`, [inv.token])).rows[0].p;
   assert.equal(memberPreview.status, 'already_member');
+  assert.equal(memberPreview.event_id, eventId);
   assert.equal((await as(db, null, `select public.preview_invitation('nope') as p`)).rows[0].p.status, 'invalid');
+  // Lien expiré ou épuisé : le statut seul, aucun détail sur l'événement.
+  const expired = await invite(db, lea, eventId);
+  await db.query(`update public.invitations set expires_at = now() - interval '1 minute' where id = $1`, [expired.id]);
+  assert.deepEqual((await as(db, null, `select public.preview_invitation($1) as p`, [expired.token])).rows[0].p, { status: 'expired' });
+  const single = await invite(db, lea, eventId, 'participant', 24, 1);
+  await join(db, await createUser(db, 'Rita'), single.token);
+  assert.deepEqual((await as(db, intrus, `select public.preview_invitation($1) as p`, [single.token])).rows[0].p, { status: 'exhausted' });
 });
 
 test('invitation : rejoindre deux fois ne crée qu’une adhésion et ne consomme pas le lien', async () => {
@@ -268,30 +278,83 @@ test('contributions : idempotence, confirmation par le service uniquement, total
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_1')`, [c1.id]);
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_1')`, [c1.id]); // webhook rejoué
   const f = (await as(db, sarah, `select public.event_funding($1) as f`, [ev])).rows[0].f;
-  assert.equal(f.collected_cents, 1500);
-  assert.equal(f.contributor_count, 1);
   assert.equal(f.my_confirmed_cents, 1500);
+  assert.equal(f.progress_step, 0, '15 € sur 180 € : palier 0 %');
+  assert.equal(f.collected_cents, null);
+  assert.equal(f.contributor_count, undefined, 'plus de compteur de contributeurs');
 
   // Échec puis nouvelle tentative avec une nouvelle clé.
   const c2 = (await as(db, lea, `select (public.contribution_create($1, 3000, 'key-lea-00001')).*`, [ev])).rows[0];
   await as(db, 'service', `select public.contribution_settle($1, false, 'sim_2', 'Carte refusée (simulation)')`, [c2.id]);
-  assert.equal((await as(db, lea, `select public.event_funding($1) as f`, [ev])).rows[0].f.collected_cents, 1500);
+  assert.equal((await as(db, lea, `select public.event_funding($1) as f`, [ev])).rows[0].f.progress_step, 0);
   const c3 = (await as(db, lea, `select (public.contribution_create($1, 3000, 'key-lea-00002')).*`, [ev])).rows[0];
   await as(db, 'service', `select public.contribution_settle($1, true, 'sim_3')`, [c3.id]);
-  assert.equal((await as(db, lea, `select public.event_funding($1) as f`, [ev])).rows[0].f.collected_cents, 4500);
+  const fl = (await as(db, lea, `select public.event_funding($1) as f`, [ev])).rows[0].f;
+  assert.equal(fl.progress_step, 25, '45 € sur 180 € : palier 25 %');
+  assert.equal(fl.collected_cents, null, 'gestionnaire : pas de total exact tant que la collecte est ouverte');
+  assert.equal(fl.my_confirmed_cents, 3000);
 
-  // Montants individuels privés.
+  // Montants individuels privés, aucune annonce nominative.
   const seenByLea = await as(db, lea, `select user_id from public.contributions where event_id = $1`, [ev]);
   assert.ok(seenByLea.rows.every((r) => r.user_id === lea));
-  const contributors = await as(db, lea, `select user_id from public.event_contributors($1)`, [ev]);
-  assert.equal(contributors.rows.length, 2);
-  assert.equal((await as(db, sarah, `select user_id from public.event_contributors($1)`, [ev])).rows.length, 0, 'participant : pas de liste');
+  assert.match(await errorOf(as(db, lea, `select user_id from public.event_contributors($1)`, [ev])), /permission denied/);
+  const named = await as(db, lea, `select count(*)::int as n from public.activity where event_id = $1 and kind = 'contribution_confirmed' and actor_id is not null`, [ev]);
+  assert.equal(named.rows[0].n, 0);
+  const badges = await as(db, lea, `select user_id from public.user_badges where event_id = $1 and badge = 'contributor'`, [ev]);
+  assert.deepEqual(badges.rows.map((r) => r.user_id), [lea], 'timbre « Complice » des autres invisible');
 
-  // Bornes et clôture.
+  // Bornes, quota de demandes en attente et clôture.
   assert.match(await errorOf(as(db, sarah, `select public.contribution_create($1, 50, 'key-sarah-0002')`, [ev])), /invalid_amount/);
+  for (let i = 0; i < 5; i++) await as(db, sarah, `select public.contribution_create($1, 1000, $2)`, [ev, `key-pending-${i}0`]);
+  assert.match(await errorOf(as(db, sarah, `select public.contribution_create($1, 1000, 'key-pending-50')`, [ev])), /too_many_pending/);
   await db.query(`update public.events set contributions_close_at = now() - interval '1 minute', votes_close_at = now() - interval '1 minute' where id = $1`, [ev]);
   assert.match(await errorOf(as(db, sarah, `select public.contribution_create($1, 1000, 'key-sarah-0003')`, [ev])), /contributions_closed/);
   assert.match(await errorOf(as(db, intrus, `select public.contribution_create($1, 1000, 'key-intrus-001')`, [ev])), /forbidden/);
+
+  // Collecte close : total exact pour les gestionnaires (achat), jamais pour les participants.
+  assert.equal((await as(db, lea, `select public.event_funding($1) as f`, [ev])).rows[0].f.collected_cents, 4500);
+  assert.equal((await as(db, sarah, `select public.event_funding($1) as f`, [ev])).rows[0].f.collected_cents, null);
+});
+
+test('cagnotte : objectif modifiable par un gestionnaire, paliers dans « Mes événements »', async () => {
+  const ev = await createEvent(db, lea, { target: 10000 });
+  const inv = await invite(db, lea, ev);
+  await join(db, sarah, inv.token);
+  assert.match(await errorOf(as(db, sarah, `select public.set_event_target($1, 20000)`, [ev])), /forbidden/);
+  assert.match(await errorOf(as(db, lea, `select public.set_event_target($1, 50)`, [ev])), /invalid_target_amount/);
+  await as(db, lea, `select public.set_event_target($1, 8000)`, [ev]);
+  await join(db, hugo, inv.token);
+  const c = (await as(db, hugo, `select (public.contribution_create($1, 4000, 'key-target-001')).*`, [ev])).rows[0];
+  await as(db, 'service', `select public.contribution_settle($1, true, 'sim_t')`, [c.id]);
+  const mine = (await as(db, sarah, `select * from public.my_events_funding() where event_id = $1`, [ev])).rows[0];
+  assert.equal(mine.progress_step, 50);
+  assert.equal(mine.goal_reached, false);
+  assert.equal((await as(db, intrus, `select * from public.my_events_funding() where event_id = $1`, [ev])).rows.length, 0);
+});
+
+test('fonctions d’aide : aucune réponse pour un non-membre', async () => {
+  const p = (await as(db, lea, `insert into public.proposals (event_id, title, price_cents) values ($1, 'Lampe', 3000) returning id`, [eventId])).rows[0].id;
+  assert.equal((await as(db, intrus, `select public.proposal_event($1) as e`, [p])).rows[0].e, null);
+  assert.equal((await as(db, sarah, `select public.proposal_event($1) as e`, [p])).rows[0].e, eventId);
+  const past = await createEvent(db, lea);
+  await db.query(`update public.events set votes_close_at = now() - interval '2 days', contributions_close_at = now() - interval '2 days', reveal_at = now() - interval '1 day' where id = $1`, [past]);
+  assert.equal((await as(db, intrus, `select public.is_revealed($1) as r`, [past])).rows[0].r, false);
+  assert.equal((await as(db, lea, `select public.is_revealed($1) as r`, [past])).rows[0].r, true);
+});
+
+test('politiques : auth.uid() évalué une fois par requête', async () => {
+  const { rows } = await db.query(`
+    select policyname from pg_policies where schemaname = 'public'
+      and (replace(coalesce(qual, '') || coalesce(with_check, ''), 'SELECT auth.uid()', '') like '%auth.uid()%')`);
+  assert.deepEqual(rows, []);
+  const wrapped = await db.query(`select count(*)::int as n from pg_policies where schemaname = 'public' and (coalesce(qual, '') || coalesce(with_check, '')) like '%SELECT auth.uid()%'`);
+  assert.ok(wrapped.rows[0].n >= 20);
+});
+
+test('création d’événements : quota par compte sur 24 h', async () => {
+  const spammer = await createUser(db, 'Spam');
+  for (let i = 0; i < 30; i++) await createEvent(db, spammer);
+  assert.match(await errorOf(createEvent(db, spammer)), /rate_limited/);
 });
 
 // ---------------------------------------------------------------- missions
@@ -350,6 +413,38 @@ test('fonctions internes non appelables par un client (anti-triche, anti-spam)',
   assert.equal(await errorOf(as(db, sarah, `select public.event_progress($1)`, [eventId])), null);
   // Anonyme : seulement l'aperçu d'invitation.
   assert.match(await errorOf(as(db, null, `select public.event_progress($1)`, [eventId])) ?? 'aucune erreur', /permission denied/);
+});
+
+test('privilèges de tables explicites (indépendants des droits par défaut du projet)', async () => {
+  const priv = async (role, table, p) =>
+    (await db.query(`select has_table_privilege($1, $2, $3) as ok`, [role, `public.${table}`, p])).rows[0].ok;
+  // Les clients lisent et écrivent via la RLS…
+  assert.equal(await priv('authenticated', 'events', 'select'), true);
+  const anyCol = async (role, table, p) =>
+    (await db.query(`select has_any_column_privilege($1, $2, $3) as ok`, [role, `public.${table}`, p])).rows[0].ok;
+  assert.equal(await anyCol('authenticated', 'proposals', 'insert'), true);
+  assert.equal(await anyCol('authenticated', 'messages', 'insert'), true);
+  assert.equal(await priv('authenticated', 'capsule_entries', 'delete'), true);
+  // … sans opérations dangereuses ni écritures réservées au serveur.
+  for (const table of ['events', 'contributions', 'messages', 'capsule_entries']) {
+    assert.equal(await priv('authenticated', table, 'truncate'), false, `truncate ${table}`);
+    assert.equal(await priv('anon', table, 'select'), false, `anon select ${table}`);
+  }
+  assert.equal(await priv('authenticated', 'contributions', 'insert'), false);
+  assert.equal(await priv('authenticated', 'votes', 'insert'), false);
+  assert.equal(await priv('authenticated', 'user_badges', 'insert'), false);
+  assert.equal(await priv('authenticated', 'messages', 'update'), false);
+  // Insertion limitée aux colonnes métier : pas de date, de compteur ni de statut choisis par le client.
+  assert.equal(await priv('authenticated', 'tasks', 'insert'), false, 'missions créées via create_task uniquement');
+  assert.equal(await anyCol('authenticated', 'invitation_acceptances', 'select'), false);
+  assert.match(await errorOf(as(db, sarah, `insert into public.messages (event_id, body, created_at) values ($1, 'antidaté', now() - interval '1 year')`, [eventId])) ?? 'aucune erreur', /permission denied/);
+  assert.match(await errorOf(as(db, sarah, `insert into public.proposals (event_id, title, price_cents, vote_count) values ($1, 'Truquée', 100, 99)`, [eventId])) ?? 'aucune erreur', /permission denied/);
+  assert.match(await errorOf(as(db, sarah, `insert into public.capsule_entries (event_id, body, published_at) values ($1, 'x', now())`, [eventId])) ?? 'aucune erreur', /permission denied/);
+  assert.match(await errorOf(as(db, sarah, `update public.notification_prefs set user_id = $1`, [hugo])) ?? 'aucune erreur', /permission denied/);
+  // Le service (API, démo) peut marquer un événement de démonstration.
+  assert.equal(await priv('service_role', 'events', 'update'), true);
+  assert.equal(await errorOf(as(db, 'service', `update public.events set is_demo = true where id = $1`, [eventId])), null);
+  await as(db, 'service', `update public.events set is_demo = false where id = $1`, [eventId]);
 });
 
 // ---------------------------------------------------------------- storage
