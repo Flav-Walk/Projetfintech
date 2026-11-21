@@ -1,9 +1,9 @@
 import { messageFor, type CapsuleStatus } from '@complice/shared';
-import { Eye, Gift, HeartHandshake, ImagePlus, LockKeyhole, Mail, X } from 'lucide-react-native';
+import { BookOpen, Eye, Gift, HeartHandshake, ImagePlus, LockKeyhole, Mail, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn, useReducedMotion } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmButton } from '@/components/confirm-button';
 import { Mascot } from '@/components/mascot';
 import { PrivateImage } from '@/components/private-image';
@@ -33,6 +33,7 @@ export default function Capsule() {
   const entries = useCapsuleEntries(id, revealed);
   const gift = useRevealedGift(id, revealed);
   const thanks = useThanks(id, revealed);
+  const [story, setStory] = useState(false);
 
   if (event.isPending || progress.isPending) return <Loading />;
   if (!event.data || !progress.data) {
@@ -61,6 +62,10 @@ export default function Capsule() {
           }
         >
           <RevealHeader event={e} beneficiary={!isPreparer} count={entries.data?.length ?? 0} />
+          {(entries.data ?? []).length > 0 ? (
+            <Button label="Lire les mots un par un" variant="white" iconRight={<BookOpen size={20} color={colors.coral} />} onPress={() => setStory(true)} />
+          ) : null}
+          <MemoryStory visible={story} onClose={() => setStory(false)} entries={entries.data ?? []} beneficiary={!isPreparer} name={e.beneficiary_name} />
           {gift.data ? (
             <View style={{ backgroundColor: colors.white, borderRadius: radius.card, padding: space.lg, gap: space.sm }}>
               <Row gap={space.sm}>
@@ -350,7 +355,7 @@ function RevealHeader({ event, beneficiary, count }: { event: EventRow; benefici
   const reduce = useReducedMotion();
   return (
     <Animated.View entering={reduce ? FadeIn.duration(150) : ZoomIn.duration(600)} style={{ alignItems: 'center', gap: space.md, paddingVertical: space.lg }}>
-      <Mascot size={120} mood="wink" />
+      <Mascot size={120} mood="party" />
       <T v="h1" color={colors.white} style={{ textAlign: 'center' }} accessibilityRole="header">
         {beneficiary ? `Surprise, ${event.beneficiary_name} !` : 'La capsule est ouverte'}
       </T>
@@ -358,6 +363,61 @@ function RevealHeader({ event, beneficiary, count }: { event: EventRow; benefici
         {count > 0 ? `${count} mot${count > 1 ? 's' : ''} de tes proches${beneficiary ? ', rien que pour toi' : ''}.` : 'Les souvenirs de ce jour.'}
       </T>
     </Animated.View>
+  );
+}
+
+/**
+ * Lecture des mots un par un : glisser vers la gauche pour passer au suivant, comme un album.
+ * Dernière page : un merci collectif. « Réduire les animations » : défilement sans effet.
+ */
+function MemoryStory({ visible, onClose, entries, beneficiary, name }: { visible: boolean; onClose: () => void; entries: CapsuleEntryRow[]; beneficiary: boolean; name: string }) {
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const [page, setPage] = useState(0);
+  const total = entries.length + 1;
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      <View style={{ flex: 1, backgroundColor: colors.night, paddingTop: insets.top + space.sm, paddingBottom: insets.bottom + space.md }}>
+        <Row style={{ paddingHorizontal: gutter, justifyContent: 'space-between' }}>
+          <View accessible accessibilityLabel={`Page ${page + 1} sur ${total}`} style={{ flex: 1, marginRight: space.md, flexDirection: 'row', gap: 4 }}>
+            {Array.from({ length: total }, (_, i) => (
+              <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= page ? colors.sun : 'rgba(255,255,255,0.25)' }} />
+            ))}
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Fermer" hitSlop={12} onPress={onClose} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={20} color={colors.white} />
+          </Pressable>
+        </Row>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(ev) => setPage(Math.round(ev.nativeEvent.contentOffset.x / width))}
+          style={{ flex: 1 }}
+        >
+          {entries.map((x, i) => (
+            <ScrollView key={x.id} style={{ width }} contentContainerStyle={{ padding: gutter, paddingTop: space.xxl, justifyContent: 'center', flexGrow: 1 }}>
+              <View style={{ transform: [{ rotate: i % 2 ? '1.2deg' : '-1.2deg' }] }}>
+                <MemoryCard entry={x} />
+              </View>
+              <T v="small" color={colors.lavenderStrong} style={{ textAlign: 'center', marginTop: space.lg }}>
+                {i < entries.length - 1 ? 'Glisse pour lire le mot suivant' : 'Glisse encore une fois'}
+              </T>
+            </ScrollView>
+          ))}
+          <View style={{ width, padding: gutter, alignItems: 'center', justifyContent: 'center', gap: space.md }}>
+            <Mascot size={140} mood="party" />
+            <T v="h1" color={colors.white} style={{ textAlign: 'center' }}>
+              {beneficiary ? `Tout ça, c’est pour toi, ${name}` : 'Un cadeau à plusieurs mains'}
+            </T>
+            <T color={colors.lavenderStrong} style={{ textAlign: 'center', maxWidth: 320 }}>
+              {beneficiary ? 'Tu peux laisser un mot de remerciement au groupe juste sous le cadeau.' : 'Merci à chaque complice : idées, votes, missions, mots. Ces souvenirs restent ici.'}
+            </T>
+            <Button label="Revenir à la capsule" variant="white" onPress={onClose} />
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 

@@ -136,8 +136,8 @@ const buttonPalette: Record<ButtonVariant, { bg: string; fg: string; border: str
 // ------------------------------------------------------------------ Champ
 export const Field = forwardRef<
   React.ComponentRef<typeof TextInput>,
-  TextInputProps & { label: string; error?: string | null; hint?: string; icon?: ReactNode; suffix?: string }
->(function Field({ label, error, hint, icon, suffix, style, ...rest }, ref) {
+  TextInputProps & { label: string; error?: string | null; hint?: string; icon?: ReactNode; suffix?: string; right?: ReactNode }
+>(function Field({ label, error, hint, icon, suffix, right, style, ...rest }, ref) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: 6 }}>
@@ -169,6 +169,7 @@ export const Field = forwardRef<
           style={[styles.input, rest.multiline && { minHeight: 88, textAlignVertical: 'top', paddingTop: 12 }, style]}
         />
         {suffix ? <T color={colors.inkSoft}>{suffix}</T> : null}
+        {right}
       </View>
       {error ? (
         <T v="small" color={colors.danger} accessibilityLiveRegion="polite">

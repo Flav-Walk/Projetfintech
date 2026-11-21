@@ -7,10 +7,10 @@
     "icon": "./assets/images/icon.png",
     "scheme": "complice",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#FFF7F2",
+    "backgroundColor": "#FFF8F2",
     "ios": {
       "bundleIdentifier": "app.complice.mobile",
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Complice utilise tes photos uniquement quand tu choisis d’en ajouter une (couverture, idée, capsule)."
       }
@@ -18,7 +18,7 @@
     "android": {
       "package": "app.complice.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#FFF7F2",
+        "backgroundColor": "#2A1446",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -34,9 +34,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FFF7F2",
+          "backgroundColor": "#FFF8F2",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 120
         }
       ],
       "@react-native-community/datetimepicker",

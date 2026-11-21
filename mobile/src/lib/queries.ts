@@ -92,7 +92,7 @@ export function useFunding(id: string, enabled = true) {
   });
 }
 
-/** Paliers de cagnotte de mes événements (jamais de montant) : liste « Mes événements ». */
+/** Total et objectif de mes cagnottes (préparateur seulement, jamais de montant individuel). */
 export function useMyEventsFunding() {
   const { session } = useAuth();
   return useQuery({
@@ -237,8 +237,9 @@ export function useInvitations(id: string, enabled: boolean) {
       unwrap(
         await supabase
           .from('invitations')
-          .select('id, event_id, role, expires_at, revoked_at, max_uses, use_count, created_at')
+          .select('id, event_id, role, expires_at, revoked_at, max_uses, use_count, created_at, kind')
           .eq('event_id', id)
+          .eq('kind', 'link')
           .order('created_at', { ascending: false }),
       ) as InvitationRow[],
   });
@@ -308,7 +309,7 @@ export function useProfile() {
     queryKey: qk.profile,
     enabled: !!session,
     queryFn: async () =>
-      unwrap(await supabase.from('profiles').select('id, display_name, avatar_path').eq('id', session!.user.id).single()) as Profile,
+      unwrap(await supabase.from('profiles').select('id, display_name, username, avatar_path').eq('id', session!.user.id).single()) as Profile,
   });
 }
 

@@ -2,7 +2,6 @@ import {
   CONTRIBUTION_MAX_CENTS,
   CONTRIBUTION_MIN_CENTS,
   formatCents,
-  fundingStepLabel,
   messageFor,
   SIMULATED_FEE_CENTS,
   SUGGESTED_AMOUNTS_CENTS,
@@ -224,7 +223,7 @@ export default function Contribute() {
                 placeholder="25"
                 suffix="€"
                 error={amountError}
-                hint={`Entre ${formatCents(CONTRIBUTION_MIN_CENTS)} et ${formatCents(CONTRIBUTION_MAX_CENTS)}. Ton montant reste privé : le groupe voit seulement la progression par paliers.`}
+                hint={`Entre ${formatCents(CONTRIBUTION_MIN_CENTS)} et ${formatCents(CONTRIBUTION_MAX_CENTS)}. Ton montant reste privé : le groupe voit seulement le total de la cagnotte.`}
               />
             </>
           )}
@@ -240,8 +239,8 @@ export default function Contribute() {
             <RecapLine label="Total" value={formatCents(cents + SIMULATED_FEE_CENTS, { forceDecimals: true })} strong />
           </Card>
           <Banner tone="info" icon={<ShieldCheck size={22} color={colors.violet} />}>
-            Ton montant n’est visible que par toi. Le groupe voit la progression de la cagnotte par paliers, et le fil
-            annonce une nouvelle participation sans dire de qui. Dans un très petit groupe, des recoupements restent possibles.
+            Ton montant n’est visible que par toi. Le groupe voit le total de la cagnotte, et le fil annonce une nouvelle
+            participation sans dire de qui ni combien. Dans un petit groupe, le total peut tout de même laisser deviner certaines parts.
           </Banner>
           <Card tone="soft">
             <Row style={{ justifyContent: 'space-between' }}>
@@ -283,7 +282,7 @@ export default function Contribute() {
             </T>
             {funding.data ? (
               <T v="small" color={colors.inkSoft} style={{ textAlign: 'center' }}>
-                Cagnotte : {fundingStepLabel(funding.data.progress_step, funding.data.goal_reached).toLowerCase()}.
+                La cagnotte du groupe atteint {formatCents(funding.data.collected_cents)} sur {formatCents(funding.data.target_cents)}.
               </T>
             ) : null}
           </Card>

@@ -2,9 +2,12 @@ import { formatCents, messageFor } from '@complice/shared';
 import { router } from 'expo-router';
 import { Lightbulb, Plus, Scale } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProposalCard } from '@/components/idea-parts';
+import { ChoiceChip } from '@/components/kit';
+import { hapticSuccess } from '@/lib/haptics';
+import { useToast } from '@/lib/toast';
 import { PrivateImage } from '@/components/private-image';
 import { EmptyState, ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Row, T } from '@/components/ui';
@@ -43,6 +46,7 @@ export default function Ideas() {
   const reactions = useReactions(id, visible.map((p) => p.id));
   const vote = useCastVote(id);
   const react = useToggleReaction(id);
+  const toast = useToast();
   const [viewMode, setViewMode] = useState<ViewMode | null>(null);
   // Bénéficiaire : le cadeau retenu sans prix ni lien (les idées et leurs prix lui sont fermées).
   const gift = useRevealedGift(id, isBeneficiary);
@@ -187,21 +191,11 @@ export default function Ideas() {
 
         {visible.length > 1 ? (
           <View style={{ gap: 6 }}>
-            <Row gap={space.sm} style={{ flexWrap: 'wrap' }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm, paddingRight: space.lg }} accessibilityRole="tablist">
               {(Object.keys(MODE_LABELS) as ViewMode[]).map((m) => (
-                <Pressable
-                  key={m}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: mode === m }}
-                  onPress={() => setViewMode(m)}
-                  style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1.5, borderColor: mode === m ? colors.violet : colors.border, backgroundColor: mode === m ? colors.lavender : colors.surface }}
-                >
-                  <T v="label" color={mode === m ? colors.violetDark : colors.ink}>
-                    {MODE_LABELS[m]}
-                  </T>
-                </Pressable>
+                <ChoiceChip key={m} label={MODE_LABELS[m]} selected={mode === m} onPress={() => setViewMode(m)} />
               ))}
-            </Row>
+            </ScrollView>
             {mode === 'discover' ? (
               <T v="small" color={colors.inkSoft}>
                 Ordre mélangé pour découvrir chaque idée avant de voter. Le classement reste consultable à tout moment.
@@ -233,7 +227,15 @@ export default function Ideas() {
                 isSelected={x.id === e.selected_proposal_id}
                 votesOpen={votesOpen}
                 voting={vote.isPending && vote.variables === x.id}
-                onVote={() => vote.mutate(myVote.data === x.id ? null : x.id)}
+                onVote={() => {
+                  const withdraw = myVote.data === x.id;
+                  vote.mutate(withdraw ? null : x.id, {
+                    onSuccess: () => {
+                      hapticSuccess();
+                      toast.show({ text: withdraw ? 'Ta voix est retirée' : myVote.data ? 'Ton vote a changé : c’est enregistré' : 'Ta voix est enregistrée', tone: 'success' });
+                    },
+                  });
+                }}
                 onOpen={() => open(x.id)}
                 reactions={(reactions.data ?? []).filter((r) => r.proposal_id === x.id)}
                 me={me}

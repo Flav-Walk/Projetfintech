@@ -7,7 +7,7 @@ import { BackButton } from '@/components/back-header';
 import { Logo, Mascot } from '@/components/mascot';
 import { ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Row, Screen, T } from '@/components/ui';
-import { useAuth } from '@/lib/auth';
+import { signOutEverywhere, useAuth } from '@/lib/auth';
 import { formatEventDate } from '@/lib/format';
 import { clearPendingInvite, extractInviteToken, savePendingInvite } from '@/lib/pending-invite';
 import { useAcceptInvitation, useInvitationPreview } from '@/lib/queries';
@@ -92,7 +92,17 @@ export default function InviteScreen() {
         </T>
       </View>
 
-      {usable && p.title ? (
+      {usable && p.role === 'beneficiary' && !p.title ? (
+        <View style={{ backgroundColor: colors.night, borderRadius: 24, padding: space.xl, gap: space.md, alignItems: 'center' }}>
+          <Mascot size={88} mood="wink" />
+          <T v="h2" color={colors.white} style={{ textAlign: 'center' }}>
+            Une surprise se prépare pour toi
+          </T>
+          <T color={colors.lavenderStrong} style={{ textAlign: 'center' }}>
+            {p.organizer_name ?? 'Un proche'} et tes proches te préparent quelque chose. Tu découvriras leurs mots et leur cadeau le jour de l’ouverture : rien ne t’est montré avant.
+          </T>
+        </View>
+      ) : usable && p.title ? (
         <Card style={{ gap: space.md }}>
           <Row>
             <Mascot size={44} mood="wink" />
@@ -120,11 +130,21 @@ export default function InviteScreen() {
             <Banner tone="info">Tu es la personne fêtée : tu découvriras les messages et le cadeau à l’ouverture de la capsule. Rien ne te sera montré avant.</Banner>
           ) : null}
         </Card>
+      ) : p.status === 'wrong_account' ? (
+        <Banner tone="warning" title="Invitation personnelle">
+          {`Cette invitation a été envoyée à ${p.email_hint ?? 'une autre adresse'}. Elle ne fonctionne qu’avec le compte de cette adresse : déconnecte-toi puis connecte-toi (ou crée ton compte) avec elle.`}
+        </Banner>
       ) : (
         <Banner tone="error" title="Invitation indisponible">
           {INVITATION_MESSAGES[p.status]}
         </Banner>
       )}
+
+      {usable && p.personal && !session ? (
+        <Banner tone="info" title="Invitation personnelle">
+          {`Utilise l’adresse ${p.email_hint ?? 'qui a reçu l’e-mail'} pour créer ton compte ou te connecter : tu confirmeras avec un code, puis tu choisiras de rejoindre.`}
+        </Banner>
+      ) : null}
 
       {acceptError ? <Banner tone="error">{acceptError}</Banner> : null}
 
@@ -141,8 +161,20 @@ export default function InviteScreen() {
             <Button label="J’ai déjà un compte" variant="outline" onPress={() => goAuth('/sign-in')} />
           </View>
         )
+      ) : p.status === 'wrong_account' && session ? (
+        <View style={{ gap: space.md }}>
+          <Button
+            label="Changer de compte"
+            onPress={async () => {
+              await signOutEverywhere();
+              if (token) await savePendingInvite(token);
+              router.replace('/sign-in');
+            }}
+          />
+          <Button label="Retour à l’accueil" variant="outline" onPress={() => router.replace('/events')} />
+        </View>
       ) : (
-        <Button label={session ? 'Mes événements' : 'Accueil'} variant="outline" onPress={() => router.replace(session ? '/events' : '/welcome')} />
+        <Button label={session ? 'Retour à l’accueil' : 'Accueil'} variant="outline" onPress={() => router.replace(session ? '/events' : '/welcome')} />
       )}
     </Screen>
   );

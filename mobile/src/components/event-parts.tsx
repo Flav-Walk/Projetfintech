@@ -1,129 +1,155 @@
-import { formatCents, fundingStepLabel, STEP_LABELS, type EventFunding, type EventProgress } from '@complice/shared';
-import { Check, Coins } from 'lucide-react-native';
+import { formatCents, fundingLabel, STEP_LABELS, type EventFunding, type EventProgress } from '@complice/shared';
+import { Check, Lock } from 'lucide-react-native';
+import { useEffect } from 'react';
 import { View } from 'react-native';
-import { initials } from '@/lib/format';
-import { colors, fonts, space } from '@/theme/tokens';
-import { ProgressBar, Row, T } from './ui';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { formatEventDate, timeUntil } from '@/lib/format';
+import { useNow } from '@/lib/use-now';
+import { colors, fonts, radius, space } from '@/theme/tokens';
+import { AvatarPile, UserAvatar } from './avatar';
+import { Row, T } from './ui';
 
-const AVATAR_TINTS = ['#FFD8CC', '#DCD3FF', '#FFF1C7', '#D7F3E6', '#FFE1EC', '#D6ECFF'];
-
-export function Avatar({ name, size = 36, index = 0 }: { name: string; size?: number; index?: number }) {
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: AVATAR_TINTS[index % AVATAR_TINTS.length],
-        borderWidth: 2,
-        borderColor: colors.white,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <T v="small" style={{ fontFamily: fonts.extraBold, fontSize: size * 0.36 }}>
-        {initials(name)}
-      </T>
-    </View>
-  );
+/** Compatibilité : avatar par initiales (préférer UserAvatar avec la photo). */
+export function Avatar({ name, size = 36, index = 0, path }: { name: string; size?: number; index?: number; path?: string | null }) {
+  return <UserAvatar name={name} size={size} path={path} seed={`${name}-${index}`} />;
 }
 
 export function AvatarStack({ names, max = 6 }: { names: string[]; max?: number }) {
-  const shown = names.slice(0, max);
-  const rest = names.length - shown.length;
+  return <AvatarPile people={names.map((name) => ({ name }))} max={max} />;
+}
+
+/** Jauge animée (remplissage doux, désactivé si « Réduire les animations »). */
+export function Meter({ value, track, fill, height = 10, label }: { value: number; track: string; fill: string; height?: number; label: string }) {
+  const pct = Math.max(0, Math.min(100, value));
+  const reduce = useReducedMotion();
+  const w = useSharedValue(reduce ? pct : 0);
+  useEffect(() => {
+    w.value = reduce ? pct : withTiming(pct, { duration: 700, easing: Easing.out(Easing.cubic) });
+  }, [pct, reduce, w]);
+  const anim = useAnimatedStyle(() => ({ width: `${w.value}%` }));
   return (
-    <View style={{ flexDirection: 'row' }} accessibilityLabel={`${names.length} membres : ${names.join(', ')}`}>
-      {shown.map((n, i) => (
-        <View key={`${n}-${i}`} style={{ marginLeft: i === 0 ? 0 : -10 }}>
-          <Avatar name={n} index={i} />
-        </View>
-      ))}
-      {rest > 0 ? (
-        <View style={{ marginLeft: -10 }}>
-          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white }}>
-            <T v="small" color={colors.white} style={{ fontFamily: fonts.extraBold }}>
-              +{rest}
-            </T>
-          </View>
-        </View>
-      ) : null}
+    <View accessibilityRole="progressbar" accessibilityLabel={label} accessibilityValue={{ min: 0, max: 100, now: pct }} style={{ height, borderRadius: height, backgroundColor: track, overflow: 'hidden' }}>
+      <Animated.View style={[{ height: '100%', borderRadius: height, backgroundColor: fill }, anim]} />
     </View>
   );
 }
 
 /**
- * Progression financière (corail). Jamais mélangée avec l'organisation.
- * Le groupe voit un palier collectif, jamais le total exact pendant la collecte : les montants
- * individuels restent privés. Le total exact n'est fourni qu'aux gestionnaires, collecte close.
+ * Cagnotte (corail) : total du groupe, objectif, progression, reste, part personnelle, clôture.
+ * Jamais les montants des autres membres, jamais de classement. Le bénéficiaire ne la voit pas (RPC nulle).
  */
 export function FundingCard({ funding, children }: { funding: EventFunding; children?: React.ReactNode }) {
-  const step = funding.goal_reached ? 100 : funding.progress_step;
-  const label = fundingStepLabel(funding.progress_step, funding.goal_reached);
+  const now = useNow();
+  const label = fundingLabel(funding.percent, funding.goal_reached);
+  const closeAt = new Date(funding.contributions_close_at).getTime();
   return (
-    <View style={{ backgroundColor: colors.coral, borderRadius: 22, padding: space.xl, gap: space.md }}>
-      <Row gap={space.md} style={{ alignItems: 'flex-start' }}>
-        <Coins color={colors.white} size={30} strokeWidth={1.75} />
-        <View style={{ flex: 1 }}>
-          <T v="small" color={colors.white} style={{ opacity: 0.92 }}>
-            Cagnotte commune · objectif {formatCents(funding.target_cents)}
-          </T>
-          <T v="h2" color={colors.white}>
-            {label}
-          </T>
-        </View>
-      </Row>
-      <ProgressBar value={step} track="rgba(255,255,255,0.35)" fill={colors.white} label={`Cagnotte : ${label.toLowerCase()}`} />
-      {funding.collected_cents !== null ? (
-        <T v="bodyBold" color={colors.white}>
-          Total collecté : {formatCents(funding.collected_cents)} (visible des organisateurs, collecte close)
-        </T>
-      ) : null}
-      <T v="small" color={colors.white}>
-        {funding.my_confirmed_cents > 0 ? `Ta participation : ${formatCents(funding.my_confirmed_cents)}, visible de toi seul. ` : ''}
-        Le groupe suit la cagnotte par paliers, sans les montants de chacun.
+    <View style={{ backgroundColor: colors.coral, borderRadius: radius.card, padding: space.xl, gap: space.md, overflow: 'hidden' }}>
+      <View style={{ position: 'absolute', right: -40, top: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.10)' }} />
+      <T v="overline" color={colors.white} style={{ opacity: 0.9 }}>
+        Cagnotte commune
       </T>
+      <View accessible accessibilityLabel={`${formatCents(funding.collected_cents)} collectés sur un objectif de ${formatCents(funding.target_cents)}. ${label}.`}>
+        <Row gap={6} style={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+          <T v="money" color={colors.white}>
+            {formatCents(funding.collected_cents)}
+          </T>
+          <T v="moneySmall" color={colors.white} style={{ opacity: 0.85 }}>
+            / {formatCents(funding.target_cents)}
+          </T>
+        </Row>
+      </View>
+      <Meter value={funding.percent} track="rgba(255,255,255,0.32)" fill={colors.white} height={12} label={`Cagnotte : ${label}`} />
+      <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap' }} gap={space.sm}>
+        <T v="label" color={colors.white}>
+          {label}
+        </T>
+        <T v="label" color={colors.white}>
+          {funding.goal_reached ? 'Bravo à tout le groupe' : `Reste ${formatCents(funding.remaining_cents)}`}
+        </T>
+      </Row>
+      <View style={{ backgroundColor: 'rgba(255,255,255,0.16)', borderRadius: radius.field, padding: space.md, gap: 4 }}>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <T v="small" color={colors.white}>
+            Ta participation
+          </T>
+          <T v="label" color={colors.white} style={{ fontVariant: ['tabular-nums'] }}>
+            {funding.my_confirmed_cents > 0 ? formatCents(funding.my_confirmed_cents) : '—'}
+          </T>
+        </Row>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <T v="small" color={colors.white}>
+            {funding.contributions_open ? 'Clôture' : 'Collecte'}
+          </T>
+          <T v="label" color={colors.white}>
+            {funding.contributions_open ? `${formatEventDate(funding.contributions_close_at, undefined, false)} · ${timeUntil(funding.contributions_close_at, now)}` : closeAt <= now ? 'close' : 'fermée'}
+          </T>
+        </Row>
+      </View>
+      <Row gap={6} style={{ alignItems: 'flex-start' }}>
+        <Lock size={14} color={colors.white} style={{ marginTop: 2 }} />
+        <T v="small" color={colors.white} style={{ flex: 1, opacity: 0.95 }}>
+          Seul le total est partagé : personne ne voit combien chacun a donné. Dans un petit groupe, le total peut tout de même laisser deviner certaines parts.
+        </T>
+      </Row>
       {children}
     </View>
   );
 }
 
-/** Étapes collectives (violet). Le compteur suit les étapes réellement faites. */
-export function StepTracker({ progress, dark = false }: { progress: EventProgress; dark?: boolean }) {
-  const current = progress.steps.findIndex((s) => !s.done);
-  const fg = dark ? colors.white : colors.white;
+/** Version compacte (liste de l'accueil) : total / objectif et jauge. */
+export function FundingMini({ collected, target, percent, goalReached }: { collected: number; target: number; percent: number; goalReached: boolean }) {
   return (
-    <View style={{ gap: space.sm }}>
+    <View style={{ gap: 6 }}>
       <Row style={{ justifyContent: 'space-between' }}>
-        {progress.steps.map((s, i) => {
-          const isCurrent = i === current;
-          return (
-            <View key={s.key} style={{ alignItems: 'center', flex: 1, gap: 4 }} accessibilityLabel={`${STEP_LABELS[s.key]} : ${s.done ? 'faite' : isCurrent ? 'en cours' : 'à venir'}`}>
+        <T v="moneySmall" color={colors.coralInk}>
+          {formatCents(collected)}
+          <T v="small" color={colors.inkSoft} style={{ fontFamily: fonts.bold }}>
+            {`  sur ${formatCents(target)}`}
+          </T>
+        </T>
+        <T v="label" color={goalReached ? colors.success : colors.inkSoft}>
+          {goalReached ? 'Objectif atteint' : `${Math.min(percent, 99)} %`}
+        </T>
+      </Row>
+      <Meter value={percent} track={colors.coralSoft} fill={colors.coral} height={8} label={`Cagnotte : ${fundingLabel(percent, goalReached)}`} />
+    </View>
+  );
+}
+
+/** Étapes collectives (violet). Le compteur suit les étapes réellement faites. */
+export function StepTracker({ progress }: { progress: EventProgress; dark?: boolean }) {
+  const current = progress.steps.findIndex((s) => !s.done);
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+      {progress.steps.map((s, i) => {
+        const isCurrent = i === current;
+        const last = i === progress.steps.length - 1;
+        return (
+          <View key={s.key} style={{ flex: 1, alignItems: 'center', gap: 6 }} accessible accessibilityLabel={`${STEP_LABELS[s.key]} : ${s.done ? 'faite' : isCurrent ? 'en cours' : 'à venir'}`}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch' }}>
+              <View style={{ flex: 1, height: 3, backgroundColor: i === 0 ? 'transparent' : s.done || isCurrent ? colors.white : 'rgba(255,255,255,0.3)' }} />
               <View
                 style={{
                   width: 30,
                   height: 30,
                   borderRadius: 15,
-                  backgroundColor: s.done ? colors.white : 'transparent',
+                  backgroundColor: s.done ? colors.white : isCurrent ? colors.sun : 'transparent',
                   borderWidth: 2.5,
-                  borderColor: s.done || isCurrent ? colors.white : 'rgba(255,255,255,0.45)',
+                  borderColor: s.done ? colors.white : isCurrent ? colors.sun : 'rgba(255,255,255,0.45)',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                {s.done ? <Check size={18} color={colors.violet} strokeWidth={3} /> : isCurrent ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.sun }} /> : null}
+                {s.done ? <Check size={17} color={colors.violet} strokeWidth={3} /> : <T v="small" color={isCurrent ? colors.ink : colors.white} style={{ fontFamily: fonts.extraBold }}>{i + 1}</T>}
               </View>
-              <T v="small" color={fg} style={{ fontFamily: isCurrent ? fonts.extraBold : fonts.semiBold, textAlign: 'center' }}>
-                {STEP_LABELS[s.key]}
-              </T>
-              {isCurrent ? (
-                <T v="small" color={fg} style={{ fontSize: 11, opacity: 0.85, marginTop: -4 }}>
-                  (en cours)
-                </T>
-              ) : null}
+              <View style={{ flex: 1, height: 3, backgroundColor: last ? 'transparent' : s.done ? colors.white : 'rgba(255,255,255,0.3)' }} />
             </View>
-          );
-        })}
-      </Row>
+            <T v="small" color={colors.white} numberOfLines={1} style={{ fontFamily: isCurrent ? fonts.extraBold : fonts.semiBold, opacity: s.done || isCurrent ? 1 : 0.75 }}>
+              {STEP_LABELS[s.key]}
+            </T>
+          </View>
+        );
+      })}
     </View>
   );
 }

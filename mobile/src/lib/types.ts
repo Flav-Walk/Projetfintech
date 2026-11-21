@@ -28,6 +28,7 @@ export interface EventRow {
 export interface Profile {
   id: string;
   display_name: string;
+  username: string;
   avatar_path: string | null;
 }
 
@@ -49,6 +50,8 @@ export interface InvitationRow {
   max_uses: number | null;
   use_count: number;
   created_at: string;
+  /** Lien de partage ou lien personnel envoyé par e-mail (migration 11). */
+  kind?: 'link' | 'email';
 }
 
 export interface ActivityRow {
@@ -160,6 +163,8 @@ export interface NotificationPrefs {
   messages: boolean;
   /** Recevoir aussi l'ouverture de la capsule par e-mail (migration 10). */
   emails: boolean;
+  /** Demandes d'ami et acceptations (migration 11). */
+  friends: boolean;
 }
 
 export interface ThanksRow {

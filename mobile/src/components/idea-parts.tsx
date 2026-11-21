@@ -1,9 +1,11 @@
 import { formatCents, REACTIONS } from '@complice/shared';
 import { Check, ExternalLink, Trophy } from 'lucide-react-native';
 import { Linking, Pressable, View } from 'react-native';
+import { hapticTap } from '@/lib/haptics';
 import type { ProposalRow, ReactionRow } from '@/lib/types';
 import { colors, fonts, radius, space } from '@/theme/tokens';
 import { PrivateImage } from './private-image';
+import { REACTION_LABELS, ReactionGlyph } from './reactions';
 import { Button, Card, Chip, ProgressBar, Row, T } from './ui';
 
 export function openProductLink(url: string) {
@@ -49,13 +51,16 @@ export function ReactionBar({
           <Pressable
             key={e}
             disabled={disabled}
-            onPress={() => onToggle(e, mine)}
+            onPress={() => {
+              hapticTap();
+              onToggle(e, mine);
+            }}
             accessibilityRole="button"
             accessibilityState={{ selected, disabled }}
-            accessibilityLabel={`Réaction ${e}${count ? `, ${count}` : ''}${selected ? ', la tienne' : ''}`}
-            style={{
-              minHeight: 36,
-              minWidth: 44,
+            accessibilityLabel={`Réaction « ${REACTION_LABELS[e]} »${count ? `, ${count}` : ''}${selected ? ', la tienne' : ''}`}
+            style={({ pressed }) => ({
+              minHeight: 40,
+              minWidth: 48,
               paddingHorizontal: 8,
               borderRadius: radius.pill,
               borderWidth: 1.5,
@@ -65,9 +70,10 @@ export function ReactionBar({
               alignItems: 'center',
               justifyContent: 'center',
               gap: 4,
-            }}
+              transform: [{ scale: pressed ? 0.92 : selected ? 1.04 : 1 }],
+            })}
           >
-            <T style={{ fontSize: 16 }}>{e}</T>
+            <ReactionGlyph emoji={e} size={22} />
             {count ? (
               <T v="small" style={{ fontFamily: fonts.bold }}>
                 {count}
