@@ -3,10 +3,45 @@
 | Lot | Contenu | État |
 |---|---|---|
 | 1 | Monorepo, branches, analyse de la planche (`DESIGN.md`), contrats, migrations complètes | **fait** |
-| 2 | Comptes, création d'événement, invitations, accueil d'événement, membres, réglages, profil | **fait côté code**, non vérifié contre Supabase (migrations à appliquer) |
-| 3 | Propositions et votes, contributions simulées | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
-| 4 | Missions, discussion, capsule, timbres, rappels | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
-| 5 | Vérification distante multi-comptes, téléphone, revue sécurité/accessibilité | **en cours** : migrations 1-6 appliquées à distance ; 7 (privilèges) et 8 (confidentialité) prêtes dans un seul fichier, à appliquer ; puis parcours multi-comptes, Render, téléphone |
+| 2 | Comptes, création d'événement, invitations, accueil d'événement, membres, réglages, profil | **fait**, vérifié à distance (script et app web) |
+| 3 | Propositions et votes, contributions simulées | **fait**, vérifié à distance (script et app web) |
+| 4 | Missions, discussion, capsule, timbres, rappels | **fait**, vérifié à distance (script et app web) |
+| 5 | Vérification distante multi-comptes, revue sécurité, confidentialité des montants | **fait** (migrations 7 à 9 appliquées) |
+| 6 | MVP complet : parcours de compte, e-mails Brevo, invitations par e-mail, remerciements, modèles, brouillons | **fait côté code** ; migration 10, SMTP et clé Brevo à configurer ; essai téléphone à faire |
+
+## Lot 6 — MVP complet (2026-11-21, `main` après fusion de `front` 39a6b83)
+
+### Réalisé
+- **Compte** : mot de passe affichable, règles cochées pendant la saisie, renvoi d'e-mail limité à une
+  fois par minute, invitation portée par le lien de confirmation, session expirée expliquée,
+  déconnexion qui efface brouillons et invitation en attente, messages d'erreur Supabase traduits
+  (adresse refusée, trop de demandes, envoi impossible).
+- **E-mails** (docs/EMAILS.md) : modèles Auth en français (`supabase/templates`), API Brevo côté
+  serveur, file `email_outbox` avec 3 essais, invitation par e-mail, annonce d'ouverture de capsule
+  selon les préférences, réveil de l'API par pg_net.
+- **Organisation** : modèles d'événement, missions par défaut selon l'occasion et modifiables,
+  récapitulatif (cadeau, missions, dates), idées « À découvrir » avant le classement, filtres,
+  brouillons locaux (idée, mot de capsule), remerciements du bénéficiaire, retours haptiques.
+- **Gamification** : timbre « Complice » retiré de l'affichage, prochaine action « cagnotte » neutre ;
+  leviers et dark patterns écartés dans docs/GAMIFICATION.md.
+- Canaux temps réel uniques par écran (deux onglets montés ne se coupent plus).
+
+### Vérifié
+- `npm test` : SQL 46/46 (dont 7 nouveaux tests de la migration 10), shared 6/6, backend 14/14 (envoi
+  Brevo simulé, erreurs temporaires et définitives, contenu échappé, aucune donnée financière dans les
+  e-mails, clé jamais renvoyée) ; typecheck, ESLint 0 problème, `expo install --check` à jour.
+- Fichier de la migration 10 validé sur une copie de l'état distant (verify.sql 13/13, relance refusée).
+- **App web** contre le Supabase distant (Chromium 360×740) : 15 contrôles d'interface sur 17 —
+  règles et affichage du mot de passe, absence de boutons Apple/Google, modèle « départ », texte de
+  confidentialité, création d'un événement depuis l'interface, récapitulatif, étagère sans timbre
+  financier, mission renommée, modes d'affichage des idées et filtre « Mes idées ».
+- Inscription d'un **nouveau compte depuis l'interface** : refusée par Supabase pour une adresse
+  `@example.com` (domaine réservé), puis limitée (429) par le SMTP intégré ; l'app affiche désormais un
+  message explicite. **Réception d'e-mail non vérifiée** : nécessite le SMTP Brevo.
+
+### Non vérifié
+- Migration 10 à distance, e-mails réels (envoi, livraison, réception, lien ouvert), API avec Brevo
+  sur Render, app sur téléphone (clavier, galerie, haptique, liens profonds).
 
 ## Reprise — vérification distante (2026-11-21)
 

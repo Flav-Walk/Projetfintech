@@ -6,8 +6,9 @@ Projet : `https://uecptmijcjwmzdebeugk.supabase.co`.
 
 ### Appliquer les migrations
 
-8 fichiers dans `supabase/migrations/`, dans l'ordre (1 à 5 : schéma ; 6 : rappels, discussion,
-missions ; 7 : privilèges explicites sur les tables ; 8 : confidentialité des montants et durcissement). Chaque option enregistre les versions dans `supabase_migrations.schema_migrations`, comme
+10 fichiers dans `supabase/migrations/`, dans l'ordre (1 à 5 : schéma ; 6 : rappels, discussion,
+missions ; 7 : privilèges explicites sur les tables ; 8 : confidentialité des montants et durcissement ;
+9 : timbre « Complice » silencieux ; 10 : e-mails métier, remerciements, missions selon l'occasion). Chaque option enregistre les versions dans `supabase_migrations.schema_migrations`, comme
 `supabase db push`, pour que les outils restent cohérents ensuite.
 
 Option A — un seul copier-coller (recommandé) :
@@ -18,9 +19,9 @@ Option A — un seul copier-coller (recommandé) :
 3. Avec une version de départ, le fichier commence par un garde-fou : il s'arrête sans rien modifier si
    une migration antérieure n'est pas enregistrée, ou si l'une des migrations incluses l'est déjà.
 
-État au 2026-11-21 : migrations 1 à 6 appliquées et enregistrées. Restent la 7 (privilèges) et la 8
-(confidentialité des montants), dans un seul fichier : `npm run db:bundle -- 20261121000700`, puis
-étape 2. Sans elles, l'app et l'API ne peuvent ni lire ni écrire, et l'app attend la nouvelle cagnotte.
+État au 2026-11-21 : migrations 1 à 9 appliquées et enregistrées. Reste la 10 :
+`npm run db:bundle -- 20261121001000`, puis étape 2. Sans elle : pas de remerciements, pas d'e-mails
+métier, préférence « Aussi par e-mail » inopérante, missions par défaut identiques pour toutes les occasions.
 
 Privilèges : sur les projets Supabase récents, une nouvelle table du schéma `public` ne donne à `anon`,
 `authenticated` et `service_role` que TRUNCATE, REFERENCES, TRIGGER et MAINTAIN. Toute migration qui
@@ -37,9 +38,10 @@ authentification, puis demander l'application des migrations.
 
 ### Vérification
 
-Coller `supabase/verify.sql` dans le SQL Editor : chaque ligne doit afficher `ok = true` (8 migrations,
+Coller `supabase/verify.sql` dans le SQL Editor : chaque ligne doit afficher `ok = true` (10 migrations,
 17 tables, RLS partout, trigger profil, buckets privés, politiques Storage, 7 tables Realtime, règlement
-fermé aux clients, privilèges de tables conformes, montants hors de `events`, aperçu d'invitation ouvert). La dernière requête liste la tâche `complice-reminders`.
+fermé aux clients, privilèges de tables conformes, montants hors de `events`, aucune annonce nominative,
+file d'e-mails fermée et remerciements, aperçu d'invitation ouvert). La dernière requête liste la tâche `complice-reminders`.
 
 ### Rappels planifiés (pg_cron)
 
@@ -148,19 +150,23 @@ présent sur le poste de développement seulement). `seed:demo` les réutilise s
 
 Service en ligne : `https://complice-api.onrender.com`.
 
-1. Render Dashboard > **New > Blueprint** > dépôt `Flav-Walk/Projetfintech`, branche `main`.
-   Render lit `render.yaml` (service `complice-api`, région Francfort, plan gratuit).
-2. Renseigner les variables marquées `sync: false` : `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
-3. Déployer, puis vérifier `https://<service>.onrender.com/health` (`"status":"ok"`, `"admin_configured":true`).
+**Branche déployée : `backend`** (décision du 2026-11-21 ; `main` reste la version intégrée et vérifiée).
+
+1. Render Dashboard > **New > Blueprint** > dépôt `Flav-Walk/Projetfintech`. Render lit `render.yaml`
+   (service `complice-api`, branche `backend`, région Francfort, plan gratuit).
+2. Renseigner les variables marquées `sync: false` : `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`,
+   `BREVO_API_KEY`, `BREVO_FROM_EMAIL` (voir docs/EMAILS.md).
+3. Déployer, puis vérifier `https://<service>.onrender.com/health` (`"status":"ok"`,
+   `"admin_configured":true`, `"email_configured":true`).
 4. Mettre cette URL dans `EXPO_PUBLIC_API_URL`.
 
 Service créé à la main (hors Blueprint) : complice-api > **Settings > Build & Deploy** :
-- **Branch** : `main` (pas `backend`) ;
+- **Branch** : `backend` ;
 - **Health Check Path** : `/health` ;
 - **Auto-Deploy** : « On Commit ».
 
-Contrôle : après un push sur `main`, `/health` renvoie `"version"` = les 7 premiers caractères du
-commit de `main` (variable `RENDER_GIT_COMMIT`). `/` répond 404 : c'est normal, l'API n'a pas de page d'accueil.
+Contrôle : après un push sur `backend`, `/health` renvoie `"version"` = les 7 premiers caractères du
+commit de `backend` (variable `RENDER_GIT_COMMIT`). `/` répond 404 : c'est normal, l'API n'a pas de page d'accueil.
 
 `render.yaml` déclare un `buildFilter` : seul un push qui modifie `backend/**`, `packages/shared/**`,
 `package.json` ou `package-lock.json` déclenche un déploiement. Un push limité à `mobile/`, `docs/` ou
