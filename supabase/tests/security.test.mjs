@@ -357,8 +357,10 @@ test('privilèges de tables explicites (indépendants des droits par défaut du 
     (await db.query(`select has_table_privilege($1, $2, $3) as ok`, [role, `public.${table}`, p])).rows[0].ok;
   // Les clients lisent et écrivent via la RLS…
   assert.equal(await priv('authenticated', 'events', 'select'), true);
-  assert.equal(await priv('authenticated', 'proposals', 'insert'), true);
-  assert.equal(await priv('authenticated', 'messages', 'insert'), true);
+  const anyCol = async (role, table, p) =>
+    (await db.query(`select has_any_column_privilege($1, $2, $3) as ok`, [role, `public.${table}`, p])).rows[0].ok;
+  assert.equal(await anyCol('authenticated', 'proposals', 'insert'), true);
+  assert.equal(await anyCol('authenticated', 'messages', 'insert'), true);
   assert.equal(await priv('authenticated', 'capsule_entries', 'delete'), true);
   // … sans opérations dangereuses ni écritures réservées au serveur.
   for (const table of ['events', 'contributions', 'messages', 'capsule_entries']) {
@@ -369,6 +371,13 @@ test('privilèges de tables explicites (indépendants des droits par défaut du 
   assert.equal(await priv('authenticated', 'votes', 'insert'), false);
   assert.equal(await priv('authenticated', 'user_badges', 'insert'), false);
   assert.equal(await priv('authenticated', 'messages', 'update'), false);
+  // Insertion limitée aux colonnes métier : pas de date, de compteur ni de statut choisis par le client.
+  assert.equal(await priv('authenticated', 'tasks', 'insert'), false, 'missions créées via create_task uniquement');
+  assert.equal(await anyCol('authenticated', 'invitation_acceptances', 'select'), false);
+  assert.match(await errorOf(as(db, sarah, `insert into public.messages (event_id, body, created_at) values ($1, 'antidaté', now() - interval '1 year')`, [eventId])) ?? 'aucune erreur', /permission denied/);
+  assert.match(await errorOf(as(db, sarah, `insert into public.proposals (event_id, title, price_cents, vote_count) values ($1, 'Truquée', 100, 99)`, [eventId])) ?? 'aucune erreur', /permission denied/);
+  assert.match(await errorOf(as(db, sarah, `insert into public.capsule_entries (event_id, body, published_at) values ($1, 'x', now())`, [eventId])) ?? 'aucune erreur', /permission denied/);
+  assert.match(await errorOf(as(db, sarah, `update public.notification_prefs set user_id = $1`, [hugo])) ?? 'aucune erreur', /permission denied/);
   // Le service (API, démo) peut marquer un événement de démonstration.
   assert.equal(await priv('service_role', 'events', 'update'), true);
   assert.equal(await errorOf(as(db, 'service', `update public.events set is_demo = true where id = $1`, [eventId])), null);

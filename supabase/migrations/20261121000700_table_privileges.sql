@@ -47,3 +47,22 @@ grant update (title, due_at, position) on public.tasks to authenticated;
 revoke update, delete on public.messages from authenticated;
 revoke update on public.capsule_entries from authenticated;
 grant update (body, photo_path, status) on public.capsule_entries to authenticated;
+
+-- 4. Renforcement : insertion et modification limitées aux colonnes envoyées par l'app. Les dates,
+--    compteurs, statuts et identifiants techniques restent fixés par la base (défauts et triggers).
+revoke insert on public.proposals, public.messages, public.capsule_entries, public.proposal_comments,
+  public.proposal_reactions, public.tasks from authenticated;
+grant insert (event_id, title, price_cents, product_url, description, image_path) on public.proposals to authenticated;
+grant insert (event_id, author_id, body, client_id) on public.messages to authenticated;
+grant insert (event_id, author_id, body, photo_path, status) on public.capsule_entries to authenticated;
+grant insert (proposal_id, author_id, body) on public.proposal_comments to authenticated;
+grant insert (proposal_id, user_id, emoji) on public.proposal_reactions to authenticated;
+-- Réaction : l'app fait un upsert (proposal_id, user_id, emoji) ; la politique impose user_id = auth.uid().
+revoke update on public.proposal_reactions from authenticated;
+grant update (proposal_id, user_id, emoji) on public.proposal_reactions to authenticated;
+-- Missions : aucune insertion directe ; création par la RPC create_task (auteur et attribution contrôlés).
+-- Préférences : seulement les interrupteurs, jamais user_id.
+-- Historique des adhésions : écrit par accept_invitation (SECURITY DEFINER), jamais lu par l'app.
+revoke select on public.invitation_acceptances from authenticated;
+revoke update on public.notification_prefs from authenticated;
+grant update (invitations, votes, tasks, capsule, messages) on public.notification_prefs to authenticated;
