@@ -6,6 +6,7 @@ import { Banner, Button, Field, Screen } from '@/components/ui';
 import { authRedirectUrl } from '@/lib/auth';
 import { authErrorMessage, isEmail } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
+import { peekPendingInvite } from '@/lib/pending-invite';
 import { colors } from '@/theme/tokens';
 
 export default function ForgotPassword() {
@@ -18,7 +19,8 @@ export default function ForgotPassword() {
     setError(null);
     if (!isEmail(email)) return setError('Saisis une adresse e-mail valide.');
     setLoading(true);
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: authRedirectUrl() });
+    const invite = await peekPendingInvite();
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: authRedirectUrl(invite) });
     setLoading(false);
     // Même réponse que le compte existe ou non (pas d'énumération des comptes).
     if (err && !/user not found/i.test(err.message)) return setError(authErrorMessage(err));

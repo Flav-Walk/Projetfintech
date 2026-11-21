@@ -19,7 +19,11 @@ Option A — un seul copier-coller (recommandé) :
 3. Avec une version de départ, le fichier commence par un garde-fou : il s'arrête sans rien modifier si
    une migration antérieure n'est pas enregistrée, ou si l'une des migrations incluses l'est déjà.
 
-État au 2026-11-21 : migrations 1 à 9 appliquées et enregistrées. Reste la 10 :
+État au 2026-11-21 : migrations 1 à 9 confirmées appliquées. Lors de la reprise Auth,
+`event_thanks.event_id`, `notification_prefs.emails` et `email_outbox.status` sont lisibles
+avec la clé serveur : les objets de la migration 10 sont présents. Son enregistrement et les
+contrôles complets restent à lire dans le SQL Editor avant toute application. Ne pas la rejouer.
+Instructions d'application uniquement si son absence est établie :
 `npm run db:bundle -- 20261121001000`, puis étape 2. Sans elle : pas de remerciements, pas d'e-mails
 métier, préférence « Aussi par e-mail » inopérante, missions par défaut identiques pour toutes les occasions.
 
@@ -59,9 +63,21 @@ Lecture publique (`GET /auth/v1/settings`, 2026-11-20) : e-mail activé, inscrip
 Redirect URLs, modèles d'e-mail et SMTP ne sont pas lisibles sans accès administrateur : à contrôler
 dans le tableau de bord.
 
-Authentication > URL Configuration > **Redirect URLs** : ajouter
-- `complice://**` (development build et version installée)
-- `exp://**` (Expo Go en développement)
+Authentication > URL Configuration > **Redirect URLs** : autoriser le callback précis,
+avec une deuxième entrée pour son paramètre d'invitation :
+- `http://localhost:8081/auth/callback`
+- `http://localhost:8081/auth/callback?invite=*`
+- `complice://auth/callback`
+- `complice://auth/callback?invite=*`
+- Expo Go : les deux mêmes formes sur l'adresse réelle du serveur, par exemple
+  `exp://192.168.1.20:8081/--/auth/callback` et
+  `exp://192.168.1.20:8081/--/auth/callback?invite=*`.
+
+Remplacer l'IP par celle du QR code Expo ; en tunnel, autoriser seulement son hôte exact
+et son schéma réel (`exp` ou `exps`). Supprimer les anciennes entrées globales `exp://**`
+et `complice://**` après validation des entrées précises. Le wildcard est limité à la valeur
+du jeton hexadécimal de l'invitation. L'option expérimentale auth-js qui ajoute `sb_flow_id`
+n'est pas activée ; si elle l'est ultérieurement, adapter aussi ces entrées.
 
 Authentication > Email Templates : pour permettre la saisie d'un **code** (utile en Expo Go, où les
 liens s'ouvrent mal), ajouter `{{ .Token }}` dans les modèles « Confirm signup » et « Reset Password »,
@@ -71,6 +87,8 @@ Le service d'e-mail intégré de Supabase est limité (quelques e-mails par heur
 adresses des membres de l'organisation Supabase. Pour des tests à plusieurs comptes, configurer un SMTP
 (Authentication > SMTP Settings) ou créer les comptes avec le script de démo (section 4), qui les
 confirme directement (nécessite la clé secrète dans `backend/.env`).
+
+Dépannage de l'inscription et protocole de validation : [AUTH-DIAGNOSTIC.md](AUTH-DIAGNOSTIC.md).
 
 ### Clé secrète
 

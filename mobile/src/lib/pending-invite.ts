@@ -23,13 +23,13 @@ export async function peekPendingInvite(): Promise<string | null> {
   }
 }
 
-export async function takePendingInvite(): Promise<string | null> {
+/** Effacée seulement après adhésion réussie, pour permettre une reprise après erreur réseau. */
+export async function clearPendingInvite(expected: string): Promise<void> {
   try {
     const token = await AsyncStorage.getItem(KEY);
-    if (token) await AsyncStorage.removeItem(KEY);
-    return token;
+    if (token === expected) await AsyncStorage.removeItem(KEY);
   } catch {
-    return null;
+    // Une reprise affichera simplement « déjà membre ».
   }
 }
 

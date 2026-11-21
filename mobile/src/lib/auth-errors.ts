@@ -2,6 +2,10 @@
 export function authErrorMessage(err: { message?: string; status?: number; code?: string } | null): string {
   const m = err?.message ?? '';
   const code = err?.code ?? '';
+  if (code === 'unexpected_failure' || err?.status === 500) {
+    if (/sending|smtp|deliver/i.test(m)) return 'L’e-mail de confirmation n’a pas pu être envoyé. Réessaie plus tard ; si cela persiste, contacte l’équipe COMPLICE.';
+    return 'Le service de comptes est momentanément indisponible. Réessaie plus tard ; si cela persiste, contacte l’équipe COMPLICE.';
+  }
   if (code === 'email_address_invalid' || /email address .* is invalid/i.test(m)) return 'Cette adresse e-mail n’est pas acceptée. Vérifie-la ou utilise une autre adresse.';
   if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit') return 'Trop de demandes pour cette adresse. Patiente quelques minutes avant de réessayer.';
   if (code === 'weak_password') return 'Mot de passe trop faible : 8 caractères minimum, avec lettres et chiffres.';
@@ -9,7 +13,7 @@ export function authErrorMessage(err: { message?: string; status?: number; code?
   if (/email not confirmed/i.test(m)) return 'Confirme d’abord ton adresse e-mail (lien ou code reçu par e-mail).';
   if (/password should be at least|weak password/i.test(m)) return 'Mot de passe trop faible : 8 caractères minimum, avec lettres et chiffres.';
   if (/rate limit|too many/i.test(m) || err?.status === 429) return 'Trop de tentatives. Patiente quelques minutes avant de réessayer.';
-  if (/token has expired|otp.*expired|invalid.*otp|token.*invalid/i.test(m)) return 'Code invalide ou expiré. Demande un nouveau code.';
+  if (code === 'otp_expired' || /token has expired|otp.*expired|invalid.*otp|token.*invalid/i.test(m)) return 'Code invalide ou expiré. Demande un nouveau code.';
   if (/same.*password|different from the old/i.test(m)) return 'Choisis un mot de passe différent de l’ancien.';
   if (/network|fetch/i.test(m)) return 'Connexion impossible. Vérifie ton réseau et réessaie.';
   if (/sending.*(confirmation|recovery|magic)|smtp|email.*(send|deliver)/i.test(m)) return 'L’e-mail n’a pas pu partir pour le moment. Réessaie dans quelques minutes.';

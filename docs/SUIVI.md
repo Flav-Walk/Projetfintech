@@ -1,5 +1,29 @@
 # Suivi des lots
 
+## Reprise Codex — Auth (2026-11-21)
+
+**Inscription encore bloquée côté envoi de confirmation.** Une seule tentative normale autorisée,
+le 21 novembre à 18:50:04 Europe/Paris : HTTP 500, `unexpected_failure`,
+`Error sending confirmation email`, identifiant `01a1ff3a-c9d6-74b2-b715-7d4b5e9ad71c`.
+Message SMTP détaillé à récupérer dans Logs > Auth avant de modifier la configuration distante.
+Cause SMTP précise non établie ; ne pas considérer le parcours réel comme validé.
+
+Corrections : PKCE S256 via les primitives natives d'expo-crypto avant le client Supabase ;
+callback sûr (query/fragment, échange unique, recovery, flow id) ; invitation conservée jusqu'à
+l'adhésion réussie ; messages Auth et code OTP ; callbacks documentés sans wildcard global.
+Secrets déplacés du `.env` mobile au `.env` backend local, tous deux ignorés par Git.
+
+Vérifié : SQL 46, shared 6, backend 14, mobile 6 (**72 tests**), typage, lint, compatibilité Expo,
+exports web/Android ; navigateur Chrome (S256, erreur SMTP simulée, invitation, lien expiré).
+Render sert `3041d88`, e-mails configurés. Objets migration 10 présents via REST, registre et
+contrôles SQL complets encore non vérifiés. Aucune migration rejouée, aucun réglage distant modifié.
+API Brevo locale : IP non autorisée, expéditeurs non inspectés ; sans preuve de lien avec le SMTP.
+
+Limites : aucun appareil Android connecté ; acceptation Brevo, livraison, réception, confirmation,
+retour réel à la cagnotte et réinitialisation restent à tester. Détail et protocole :
+[AUTH-DIAGNOSTIC.md](AUTH-DIAGNOSTIC.md). Les recommandations de callbacks précises dans SETUP.md
+remplacent les anciennes mentions historiques de `exp://**` / `complice://**` ci-dessous.
+
 | Lot | Contenu | État |
 |---|---|---|
 | 1 | Monorepo, branches, analyse de la planche (`DESIGN.md`), contrats, migrations complètes | **fait** |

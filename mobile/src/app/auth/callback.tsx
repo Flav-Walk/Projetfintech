@@ -1,8 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useLinkingURL } from 'expo-linking';
+import { useEffect, useRef, useState } from 'react';
 import { Loading } from '@/components/states';
 import { Banner, Button, Screen, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { CALLBACK_ERROR, exchangeAuthCode, isRecoveryCallback, readAuthCallbackUrl } from '@/lib/auth-callback';
 import { extractInviteToken, savePendingInvite } from '@/lib/pending-invite';
 import { supabase } from '@/lib/supabase';
 
@@ -11,44 +13,51 @@ import { supabase } from '@/lib/supabase';
  * URL à autoriser dans Supabase > Authentication > URL Configuration (voir docs/SETUP.md).
  */
 export default function AuthCallback() {
-  const params = useLocalSearchParams<{ code?: string; error_description?: string; type?: string; invite?: string }>();
+  const query = useLocalSearchParams<{ code?: string; error?: string; error_code?: string; error_description?: string; type?: string; invite?: string; sb_flow_id?: string }>();
+  const params = { ...readAuthCallbackUrl(useLinkingURL()), ...query };
   const { setRecovering } = useAuth();
   const [exchangeError, setError] = useState<string | null>(null);
+  // React Strict Mode replays effects; a PKCE code must only be exchanged once.
+  const exchange = useRef<{ key: string; promise: ReturnType<typeof exchangeAuthCode> } | null>(null);
+  const failed = Boolean(params.error || params.error_code || params.error_description);
   const error =
-    exchangeError ?? params.error_description ?? (!params.code ? 'Lien incomplet. Ouvre le lien le plus récent reçu par e-mail.' : null);
+    exchangeError ?? (failed ? CALLBACK_ERROR : !params.code ? 'Lien incomplet. Ouvre le lien le plus récent reçu par e-mail.' : null);
 
   useEffect(() => {
-    if (!params.code) return;
     let cancelled = false;
     (async () => {
       // Invitation portée par le lien de confirmation : prioritaire sur le stockage local.
       const invite = extractInviteToken(params.invite ?? '');
       if (invite) await savePendingInvite(invite);
-      const { data, error: err } = await supabase.auth.exchangeCodeForSession(params.code!);
+      if (failed || !params.code) return;
+      const key = JSON.stringify([params.code, params.sb_flow_id]);
+      if (exchange.current?.key !== key) {
+        exchange.current = { key, promise: exchangeAuthCode(supabase.auth, params.code, params.sb_flow_id) };
+      }
+      const { data, error: err } = await exchange.current.promise;
       if (cancelled) return;
       if (err || !data.session) {
-        // Lien déjà utilisé alors que l'adresse est confirmée : une session existe peut-être déjà.
-        const { data: current } = await supabase.auth.getSession();
-        if (current.session) return router.replace('/after-auth');
         setError(
           /network|fetch/i.test(err?.message ?? '')
             ? 'Connexion impossible. Vérifie ton réseau, puis rouvre le lien.'
-            : 'Ce lien a expiré ou a déjà servi. Connecte-toi si tu as déjà confirmé, ou demande un nouvel e-mail depuis l’écran de connexion.',
+            : CALLBACK_ERROR,
         );
         return;
       }
       // Le type n'est pas toujours transmis : l'événement PASSWORD_RECOVERY de l'AuthProvider couvre l'autre cas.
-      if (params.type === 'recovery') {
+      if (isRecoveryCallback(data, params.type)) {
         setRecovering(true);
         router.replace('/reset-password');
       } else {
         router.replace('/after-auth');
       }
-    })();
+    })().catch(() => {
+      if (!cancelled) setError('Connexion impossible. Vérifie ton réseau, puis rouvre le lien.');
+    });
     return () => {
       cancelled = true;
     };
-  }, [params.code, params.error_description, params.type, params.invite, setRecovering]);
+  }, [params.code, params.sb_flow_id, failed, params.type, params.invite, setRecovering]);
 
   if (!error) return <Loading label="Connexion en cours…" />;
   return (

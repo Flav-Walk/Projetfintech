@@ -2,7 +2,7 @@ import { Redirect, router } from 'expo-router';
 import { useEffect } from 'react';
 import { Loading } from '@/components/states';
 import { useAuth } from '@/lib/auth';
-import { takePendingInvite } from '@/lib/pending-invite';
+import { peekPendingInvite } from '@/lib/pending-invite';
 
 /** Après connexion ou inscription : reprend l'invitation en attente, sinon la liste des événements. */
 export default function AfterAuth() {
@@ -14,7 +14,7 @@ export default function AfterAuth() {
       router.replace('/reset-password');
       return;
     }
-    takePendingInvite().then((token) => {
+    peekPendingInvite().then((token) => {
       if (token) router.replace({ pathname: '/invite/[token]', params: { token, auto: '1' } });
       else router.replace('/events');
     });

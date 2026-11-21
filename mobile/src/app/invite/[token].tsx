@@ -9,7 +9,7 @@ import { ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Row, Screen, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { formatEventDate } from '@/lib/format';
-import { extractInviteToken, savePendingInvite } from '@/lib/pending-invite';
+import { clearPendingInvite, extractInviteToken, savePendingInvite } from '@/lib/pending-invite';
 import { useAcceptInvitation, useInvitationPreview } from '@/lib/queries';
 import { colors, space } from '@/theme/tokens';
 
@@ -32,6 +32,7 @@ export default function InviteScreen() {
     try {
       const r = await accept.mutateAsync(token);
       if ((r.status === 'joined' || r.status === 'already_member') && r.event_id) {
+        await clearPendingInvite(token);
         router.replace({ pathname: '/event/[id]', params: { id: r.event_id, welcome: r.status === 'joined' ? '1' : undefined } });
       } else {
         setAcceptError(INVITATION_MESSAGES[r.status]);
@@ -54,7 +55,8 @@ export default function InviteScreen() {
       join();
     }
     if (preview.data?.status === 'already_member' && preview.data.event_id && params.auto === '1') {
-      router.replace({ pathname: '/event/[id]', params: { id: preview.data.event_id } });
+      const id = preview.data.event_id;
+      void clearPendingInvite(token!).then(() => router.replace({ pathname: '/event/[id]', params: { id } }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.auto, session, preview.data]);

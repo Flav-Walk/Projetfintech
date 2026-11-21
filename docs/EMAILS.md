@@ -25,14 +25,17 @@ Réglages Supabase :
    - « Confirm signup » : objet « Confirme ton adresse pour rejoindre COMPLICE », corps = `supabase/templates/confirmation.html` ;
    - « Reset password » : objet « Choisis un nouveau mot de passe COMPLICE », corps = `supabase/templates/recovery.html`.
    Les deux contiennent le lien (`{{ .ConfirmationURL }}`) **et** le code (`{{ .Token }}`).
-3. **Authentication > URL Configuration > Redirect URLs** : `complice://**` (version installable) et
-   `exp://**` (Expo Go). Le lien de confirmation ramène sur `/auth/callback`, avec le jeton d'invitation
+3. **Authentication > URL Configuration > Redirect URLs** : callbacks précis listés dans
+   [SETUP.md](SETUP.md#auth), pour localhost, l'hôte Expo Go réel et `complice://auth/callback`.
+   Le lien de confirmation ramène sur `/auth/callback`, avec le jeton d'invitation
    éventuel : la personne arrive directement dans la bonne cagnotte.
 4. **Authentication > Rate Limits** : garder une limite d'envoi raisonnable (l'app impose aussi 60 s
    entre deux renvois).
 
 Expo Go : le lien `exp://…` ne fonctionne que si l'e-mail est ouvert **sur le téléphone qui exécute
-Expo Go**, pendant que le serveur Expo tourne. Sinon, le **code à 6 chiffres** fonctionne partout.
+Expo Go**, pendant que le serveur Expo tourne. Sinon, le **code reçu (6 à 8 chiffres)** peut être
+saisi dans l'écran de vérification. Le lien PKCE doit être ouvert sur l'appareil et dans le
+stockage du navigateur qui a initié la demande ; un autre appareil doit utiliser le code.
 Version installable : `complice://auth/callback` ouvre l'app directement.
 
 ## E-mails métier (API + Brevo)
@@ -61,8 +64,9 @@ adresse Gmail ou Outlook comme expéditeur sera souvent classée en indésirable
 
 ## Vérifier un envoi
 Distinguer, à chaque essai :
-1. **accepté par Brevo** : ligne `sent` dans `email_outbox` avec `provider_message_id` (métier), ou
-   absence d'erreur dans l'app (compte) ;
+1. **demande acceptée par Supabase** : absence d'erreur Auth ; cela ne prouve pas à elle seule
+   un envoi Brevo (Supabase peut masquer un compte déjà existant). **Accepté par Brevo** : événement
+   d'acceptation dans les logs transactionnels ou ligne `sent` avec `provider_message_id` (métier) ;
 2. **livré** selon Brevo : Brevo > Transactional > Logs (statut « Delivered ») ;
 3. **reçu** : constaté dans la boîte de réception (et non dans les indésirables) ;
 4. **lien ouvert et parcours terminé** : l'app arrive sur la bonne cagnotte.

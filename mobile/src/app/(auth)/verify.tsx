@@ -38,7 +38,7 @@ export default function Verify() {
   async function verify() {
     if (loading) return;
     setError(null);
-    if (!/^\d{6,8}$/.test(code.trim())) return setError('Le code contient 6 chiffres.');
+    if (!/^\d{6,8}$/.test(code.trim())) return setError('Saisis les 6 à 8 chiffres du code reçu.');
     setLoading(true);
     if (type === 'recovery') setRecovering(true);
     const { error: err } = await supabase.auth.verifyOtp({ email, token: code.trim(), type });
@@ -59,13 +59,13 @@ export default function Verify() {
     const invite = await peekPendingInvite();
     const { error: err } =
       type === 'recovery'
-        ? await supabase.auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl() })
+        ? await supabase.auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl(invite) })
         : await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: authRedirectUrl(invite) } });
     setResending(false);
     setWait(RESEND_DELAY_S);
     // Même message que l'adresse corresponde ou non à un compte.
     if (err && !/not found|no user/i.test(err.message)) setError(authErrorMessage(err));
-    else setInfo('Si l’adresse est correcte, un nouvel e-mail vient de partir. Pense à regarder dans les indésirables.');
+    else setInfo('Si un envoi est possible pour cette adresse, l’e-mail a été demandé. Vérifie ta boîte et les indésirables.');
   }
 
   return (
@@ -75,7 +75,7 @@ export default function Verify() {
         <MailCheck size={56} color={colors.violet} strokeWidth={1.5} />
       </View>
       <T color={colors.inkSoft}>
-        Si un compte peut être {type === 'recovery' ? 'réinitialisé' : 'activé'} avec <T v="bodyBold">{email || 'ton adresse'}</T>, tu viens de recevoir un e-mail. Ouvre le lien depuis ce téléphone, ou saisis le code reçu.
+        Si un compte peut être {type === 'recovery' ? 'réinitialisé' : 'activé'} avec <T v="bodyBold">{email || 'ton adresse'}</T>, un e-mail a été demandé. Vérifie ta boîte et les indésirables. Ouvre le lien sur l’appareil utilisé pour la demande, ou saisis ici le code reçu.
       </T>
       <Field label="Code reçu par e-mail" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" maxLength={8} placeholder="123456" onSubmitEditing={verify} />
       {error ? <Banner tone="error">{error}</Banner> : null}
