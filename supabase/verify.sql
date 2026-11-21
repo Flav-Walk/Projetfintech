@@ -2,7 +2,7 @@
 -- Chaque ligne doit afficher ok = true.
 select 'migrations enregistrées' as controle,
        (select count(*) from supabase_migrations.schema_migrations where version like '2026%')::text as valeur,
-       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 6 as ok
+       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 7 as ok
 union all
 select 'tables COMPLICE présentes',
        count(*)::text,
@@ -39,6 +39,19 @@ select 'règlement de contribution fermé aux clients',
        case when has_function_privilege('authenticated', 'public.contribution_settle(uuid, boolean, text, text)', 'execute')
             then 'OUVERT (anomalie)' else 'fermé' end,
        not has_function_privilege('authenticated', 'public.contribution_settle(uuid, boolean, text, text)', 'execute')
+union all
+select 'privilèges de tables (migration 7)',
+       case when has_table_privilege('authenticated', 'public.events', 'select')
+             and has_table_privilege('authenticated', 'public.proposals', 'insert')
+             and has_table_privilege('service_role', 'public.events', 'update')
+             and not has_table_privilege('authenticated', 'public.events', 'truncate')
+             and not has_table_privilege('anon', 'public.events', 'select')
+            then 'conformes' else 'ANOMALIE : appliquer 20261121000700_table_privileges' end,
+       has_table_privilege('authenticated', 'public.events', 'select')
+         and has_table_privilege('authenticated', 'public.proposals', 'insert')
+         and has_table_privilege('service_role', 'public.events', 'update')
+         and not has_table_privilege('authenticated', 'public.events', 'truncate')
+         and not has_table_privilege('anon', 'public.events', 'select')
 union all
 select 'aperçu d''invitation ouvert aux visiteurs',
        case when has_function_privilege('anon', 'public.preview_invitation(text)', 'execute') then 'ouvert' else 'fermé' end,

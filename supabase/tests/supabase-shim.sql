@@ -21,9 +21,11 @@ grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 
 grant usage on schema public to anon, authenticated, service_role;
-alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+-- Projets Supabase récents (constaté sur le projet distant le 2026-11-21) : les nouvelles tables du
+-- schéma public ne donnent à anon/authenticated/service_role que TRUNCATE, REFERENCES, TRIGGER
+-- (et MAINTAIN), sans SELECT/INSERT/UPDATE/DELETE. Les migrations doivent donc tout accorder explicitement.
+alter default privileges in schema public grant truncate, references, trigger on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
-alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
 
 create schema storage;
 create table storage.buckets (
