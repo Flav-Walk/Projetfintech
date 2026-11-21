@@ -6,7 +6,7 @@
 | 2 | Comptes, création d'événement, invitations, accueil d'événement, membres, réglages, profil | **fait côté code**, non vérifié contre Supabase (migrations à appliquer) |
 | 3 | Propositions et votes, contributions simulées | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
 | 4 | Missions, discussion, capsule, timbres, rappels | **fait côté code**, testé en base locale ; non vérifié de bout en bout |
-| 5 | Vérification distante multi-comptes, téléphone, revue sécurité/accessibilité | **en cours** : migrations 1-6 appliquées à distance ; migration 7 (privilèges) à appliquer, puis parcours multi-comptes |
+| 5 | Vérification distante multi-comptes, téléphone, revue sécurité/accessibilité | **en cours** : migrations 1-6 appliquées à distance ; 7 (privilèges) et 8 (confidentialité) prêtes dans un seul fichier, à appliquer ; puis parcours multi-comptes, Render, téléphone |
 
 ## Reprise — vérification distante (2026-11-21)
 
@@ -33,16 +33,24 @@
   client), aucune insertion directe de mission, préférences limitées aux interrupteurs,
   `invitation_acceptances` illisible. Détail et avis Supabase un par un : docs/SECURITE-SUPABASE.md.
 
-### Risques relevés, à décider
-- Déduction d'un montant individuel (activité nommée + total diffusé en temps réel) : voir
-  docs/SECURITE-SUPABASE.md §2.
-- `preview_invitation` détaille aussi les liens expirés ou épuisés ; `is_revealed` et `proposal_event`
-  répondent sans contrôle d'appartenance (migration 8 proposée).
+### Migration 8 et adaptations de l'app (`a0a78c5`)
+Décisions produit (utilisateur, 2026-11-21) : montants individuels privés, plus d'annonce nominative,
+progression collective par paliers, aucune donnée financière pour le bénéficiaire.
+- SQL (`aa2b349`) : `event_finances`, paliers, annonces anonymes, `revealed_gift`, invitations
+  inutilisables muettes, fonctions d'aide muettes pour un non-membre, quotas, politiques optimisées,
+  index. Détail : docs/SECURITE-SUPABASE.md (« Suite donnée »).
+- App (`cbe674e`) : carte de cagnotte par paliers, « Mes événements » par paliers, objectif via
+  `set_event_target`, cadeau du bénéficiaire sans prix, fil d'activité anonyme.
+- Vérifié localement : `npm test` SQL 40/40, shared 6/6, backend 8/8 ; typecheck ; ESLint 0 problème ;
+  export Android et web. Fichier 7 + 8 validé sur une copie de l'état distant avec données existantes
+  (`verify.sql` 11/11, montants repris dans `event_finances`, 0 annonce nominative, relance refusée).
+- **Non vérifié** : rendu des écrans modifiés (aucune base à jour pour les afficher), Realtime distant.
 
 ### Bloqué
-- **Migration 7 à distance** : écriture refusée par le classificateur du mode automatique de Claude Code
-  (« Undermining Oversight »). À coller dans le SQL Editor : `npm run db:bundle -- 20261121000700`.
-- Parcours multi-comptes complet, refus d'accès et dévoilement : dès la migration 7 appliquée.
+- **Migrations 7 et 8 à distance** : l'écriture SQL par Claude est refusée par le classificateur du mode
+  automatique (« Undermining Oversight »), refus respecté. Fichier unique à coller dans le SQL Editor :
+  `supabase/.bundle/apply-7-8.sql` (régénérer : `npm run db:bundle -- 20261121000700`).
+- Parcours multi-comptes complet, refus d'accès et dévoilement : dès les migrations 7 et 8 appliquées.
 - Render sert toujours `a640951` après le push (voir docs/SETUP.md §5) : déploiement manuel requis.
 
 ### Cartes

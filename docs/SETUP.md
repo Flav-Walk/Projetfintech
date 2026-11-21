@@ -6,8 +6,8 @@ Projet : `https://uecptmijcjwmzdebeugk.supabase.co`.
 
 ### Appliquer les migrations
 
-7 fichiers dans `supabase/migrations/`, dans l'ordre (1 à 5 : schéma ; 6 : rappels, discussion,
-missions ; 7 : privilèges explicites sur les tables). Chaque option enregistre les versions dans `supabase_migrations.schema_migrations`, comme
+8 fichiers dans `supabase/migrations/`, dans l'ordre (1 à 5 : schéma ; 6 : rappels, discussion,
+missions ; 7 : privilèges explicites sur les tables ; 8 : confidentialité des montants et durcissement). Chaque option enregistre les versions dans `supabase_migrations.schema_migrations`, comme
 `supabase db push`, pour que les outils restent cohérents ensuite.
 
 Option A — un seul copier-coller (recommandé) :
@@ -18,8 +18,9 @@ Option A — un seul copier-coller (recommandé) :
 3. Avec une version de départ, le fichier commence par un garde-fou : il s'arrête sans rien modifier si
    une migration antérieure n'est pas enregistrée, ou si l'une des migrations incluses l'est déjà.
 
-État au 2026-11-21 : migrations 1 à 6 appliquées et enregistrées. Reste la 7 :
-`npm run db:bundle -- 20261121000700`, puis étape 2. Sans elle, l'app et l'API ne peuvent ni lire ni écrire.
+État au 2026-11-21 : migrations 1 à 6 appliquées et enregistrées. Restent la 7 (privilèges) et la 8
+(confidentialité des montants), dans un seul fichier : `npm run db:bundle -- 20261121000700`, puis
+étape 2. Sans elles, l'app et l'API ne peuvent ni lire ni écrire, et l'app attend la nouvelle cagnotte.
 
 Privilèges : sur les projets Supabase récents, une nouvelle table du schéma `public` ne donne à `anon`,
 `authenticated` et `service_role` que TRUNCATE, REFERENCES, TRIGGER et MAINTAIN. Toute migration qui
@@ -36,9 +37,9 @@ authentification, puis demander l'application des migrations.
 
 ### Vérification
 
-Coller `supabase/verify.sql` dans le SQL Editor : chaque ligne doit afficher `ok = true` (7 migrations,
+Coller `supabase/verify.sql` dans le SQL Editor : chaque ligne doit afficher `ok = true` (8 migrations,
 17 tables, RLS partout, trigger profil, buckets privés, politiques Storage, 7 tables Realtime, règlement
-fermé aux clients, privilèges de tables conformes, aperçu d'invitation ouvert). La dernière requête liste la tâche `complice-reminders`.
+fermé aux clients, privilèges de tables conformes, montants hors de `events`, aperçu d'invitation ouvert). La dernière requête liste la tâche `complice-reminders`.
 
 ### Rappels planifiés (pg_cron)
 

@@ -5,6 +5,28 @@ Revue du 2026-11-21, faite sur le projet distant (migrations 1 à 6 appliquées)
 Supabase (Advisors > Security). Pour chacun : l'objet, la justification, le risque qui reste et la
 correction.
 
+## Suite donnée : migration 8 (`20261121000800_privacy_hardening.sql`)
+
+Écrite, testée localement (SQL 40/40) et validée sur une copie de l'état distant. **Pas encore appliquée
+à distance** (fichier commun 7 + 8 : `supabase/.bundle/apply-7-8.sql`).
+
+| Constat de la revue (§2 et §3) | Correction |
+|---|---|
+| Déduction d'un montant individuel (annonce nominative + total en temps réel) | Montants sortis de `events` vers `event_finances` (aucun accès client, pas de temps réel) ; paliers de 25 % ; annonce anonyme (historique compris) ; timbre « Complice » visible de son seul titulaire ; `event_contributors` fermé aux clients ; total exact aux gestionnaires une fois la collecte close. Une déduction reste possible dans les très petits groupes. |
+| Bénéficiaire : total collecté et prix du cadeau lisibles après l'ouverture | Plus aucun montant dans `events` ; `proposals` réservée aux préparateurs ; cadeau via `revealed_gift`, sans prix ni lien. |
+| `preview_invitation` détaille un lien expiré ou épuisé, et donne `event_id` aux visiteurs | Statut seul pour un lien inutilisable ; `event_id` jamais renvoyé à un visiteur non connecté. |
+| `is_revealed`, `proposal_event` répondent à un non-membre | Réponse vide ou fausse pour un non-membre (réponse normale pour la tâche planifiée et le service). |
+| `contribution_create` : demandes « en attente » illimitées | 5 demandes en attente par heure et par compte (`too_many_pending`). |
+| `create_event` : création illimitée | 30 événements par 24 h et par compte (`rate_limited`). |
+| `refresh_reminders` : appel en boucle | Au plus une exécution par minute et par compte (table `reminder_checks`). |
+| `auth_rls_initplan` (21 politiques) | `auth.uid()` réécrit en `(select auth.uid())` dans toutes les politiques de `public`. |
+| `unindexed_foreign_keys` (15) | 15 index ajoutés. |
+
+Les avis `authenticated_security_definer_function_executable` resteront affichés : ces fonctions doivent
+rester appelables par les membres. Le risque de chacune est traité ci-dessous ; le déplacement des
+fonctions d'aide dans un schéma non exposé n'a pas été retenu, car il impose de réécrire toutes les
+fonctions qui les appellent, pour un gain désormais faible.
+
 ## 1. Droits accordés par la migration 7
 
 Les projets Supabase récents ne donnent aucun droit de lecture ni d'écriture par défaut sur les tables.

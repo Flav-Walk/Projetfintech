@@ -33,9 +33,15 @@ secrète ne sert que pour `contribution_settle`, `prepare_account_deletion` et `
 
 ## Confidentialité
 
-- **Montants** : chacun ne lit que ses contributions (RLS). Le groupe voit le total et le nombre de
-  participations (`event_funding`). Les gestionnaires voient *qui* a participé, sans montant
-  (`event_contributors`), pour remercier. Les timbres ne dépendent jamais du montant.
+- **Montants** (migration 8) : objectif et total sont dans `event_finances`, sans aucun accès client ;
+  `events`, lue par tous et diffusée en temps réel, ne contient plus de montant. Chacun ne lit que ses
+  contributions (RLS). Via `event_funding`, les préparateurs voient l'objectif, un palier collectif
+  (0, 25, 50, 75, 100 %) et leur propre montant ; le total exact n'est donné qu'aux gestionnaires, une
+  fois la collecte close (achat). Les participations sont annoncées sans nom, le timbre « Complice »
+  n'est visible que de son titulaire, et la liste des contributeurs n'est plus exposée aux clients.
+  Ces mesures réduisent les déductions possibles sans les rendre impossibles (groupe de deux, par exemple).
+- **Bénéficiaire** : aucune donnée financière. Après l'ouverture, il voit le cadeau retenu via
+  `revealed_gift` (titre, description, photo), sans prix ni lien.
 - **Votes** : chacun voit sa voix et le nombre de voix par idée. L'identité des votants n'est visible
   que si l'organisateur active `vote_visibility = 'public'`, avec un avertissement dans l'app.
 - **Capsule** : un brouillon n'est visible que par son auteur. Un mot publié reste scellé jusqu'au
