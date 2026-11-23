@@ -2,11 +2,11 @@ import { messageFor } from '@complice/shared';
 import { router } from 'expo-router';
 import { AtSign, Ban, Camera, Check, LogOut, ShieldCheck, Trash2, User } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Switch, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserAvatar } from '@/components/avatar';
 import { ConfirmButton } from '@/components/confirm-button';
-import { Divider, Group, ListRow, PageHeader, SectionHeader, Sheet } from '@/components/kit';
+import { Divider, Group, ListRow, PageHeader, SectionHeader, Sheet, Toggle } from '@/components/kit';
 import { Banner, Button, Field, Row, T } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { signOutAfterDeletion, signOutEverywhere, useAuth } from '@/lib/auth';
@@ -64,12 +64,11 @@ export default function ProfileScreen() {
                     {pref.hint}
                   </T>
                 </View>
-                <Switch
+                <Toggle
                   value={prefs.data?.[pref.key] ?? false}
                   disabled={!prefs.data}
                   onValueChange={(v) => updatePrefs.mutate({ [pref.key]: v })}
-                  trackColor={{ true: colors.violet, false: colors.border }}
-                  accessibilityLabel={`Notifications : ${pref.label}`}
+                  label={`Notifications : ${pref.label}`}
                 />
               </Row>
             </View>

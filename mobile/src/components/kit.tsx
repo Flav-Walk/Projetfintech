@@ -1,6 +1,6 @@
 import { Check, ChevronRight, X } from 'lucide-react-native';
 import { useEffect, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View, type StyleProp, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, View, type StyleProp, type ViewStyle } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, { FadeIn, SlideInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,6 +49,26 @@ export function Segmented<K extends string>({
         );
       })}
     </View>
+  );
+}
+
+// ------------------------------------------------------------------ Interrupteur aux couleurs COMPLICE (iOS, Android, web)
+export function Toggle({ value, onValueChange, label, disabled }: { value: boolean; onValueChange: (v: boolean) => void; label: string; disabled?: boolean }) {
+  const webColors = Platform.OS === 'web' ? ({ activeThumbColor: colors.white, activeTrackColor: colors.violet } as object) : {};
+  return (
+    <Switch
+      value={value}
+      disabled={disabled}
+      onValueChange={(v) => {
+        hapticTap();
+        onValueChange(v);
+      }}
+      thumbColor={colors.white}
+      trackColor={{ true: colors.violet, false: colors.border }}
+      ios_backgroundColor={colors.border}
+      accessibilityLabel={label}
+      {...webColors}
+    />
   );
 }
 
@@ -129,7 +149,7 @@ export function Divider() {
 }
 
 // ------------------------------------------------------------------ En-tête d'onglet principal
-export function PageHeader({ title, subtitle, right }: { title: string; subtitle?: string | null; right?: ReactNode }) {
+export function PageHeader({ title, subtitle, caption, right }: { title: string; subtitle?: string | null; caption?: string; right?: ReactNode }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.md, paddingTop: space.sm }}>
       <View style={{ flex: 1 }}>
@@ -141,6 +161,11 @@ export function PageHeader({ title, subtitle, right }: { title: string; subtitle
         <T v="h1" accessibilityRole="header">
           {title}
         </T>
+        {caption ? (
+          <T v="small" color={colors.inkSoft} selectable>
+            {caption}
+          </T>
+        ) : null}
       </View>
       {right}
     </View>

@@ -11,7 +11,17 @@
   invitations ; carte cagnotte avec montants ; photo de profil et pseudo ; réactions dessinées ; lecture des
   mots un par un ; jetons v2, Bricolage Grotesque, mascotte et icône d'app redessinées ([DESIGN.md](../DESIGN.md)).
 - Vérifié : SQL 59 (dont 13 nouveaux, multi-rôles), shared 6, backend 14, mobile 8 ; typage, lint ;
-  exports web et Android. Non vérifié à ce stade : migration distante, captures sur données réelles, téléphone.
+  exports web et Android.
+- **2026-11-23, à distance** : migration 11 enregistrée (11/11), droits effectifs conformes (écriture
+  fermée sur les nouvelles tables, fonctions internes fermées, recherche refusée aux anonymes, tous les
+  profils ont un pseudo). Parcours multi-comptes sur la vraie base : **47/47 contrôles** (Léa organisatrice,
+  Hugo ami invité, Camille bénéficiaire, Nora extérieure puis bloquée ; participations simulées via
+  l'API Render ; cagnotte d'essai « Les 30 ans de Camille (essai lot 7) »).
+- Captures web (rendu Expo, comptes de démo) sur 320, 360, 412 et 390 px : 56 captures, aucun débordement
+  horizontal ni erreur JS détectés ; planches dans [captures/](captures/). Corrigés après revue : filigrane
+  qui chevauchait le texte, pseudo mis en majuscules, interrupteurs hors charte sur le web.
+- Non vérifié : Render sert encore `3041d88` (déploiement automatique inactif) ; aucun e-mail métier
+  encore envoyé par l'API ; téléphone réel (zones sûres, clavier, grandes polices, lecteur d'écran).
 
 ## Cause de l'échec d'inscription (2026-11-21, 19:10)
 

@@ -61,7 +61,7 @@ export default function Friends() {
       >
         <PageHeader
           title="Amis"
-          subtitle={me ? `Ton pseudo : @${me}` : undefined}
+          caption={me ? `Ton pseudo : @${me}` : undefined}
           right={
             me ? (
               <Pressable

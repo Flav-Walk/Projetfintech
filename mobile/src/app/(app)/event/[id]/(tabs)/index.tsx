@@ -213,8 +213,8 @@ function NextCard({ next, onPress }: { next: Next; onPress: () => void }) {
   const t = TONE[next.tone];
   return (
     <View style={[{ backgroundColor: t.bg, borderRadius: radius.card, padding: space.xl, gap: space.md, overflow: 'hidden' }, shadow.card]} accessible={false}>
-      <View style={{ position: 'absolute', right: -24, bottom: -24, opacity: 0.14 }} importantForAccessibility="no-hide-descendants">
-        <next.Icon size={140} color={t.fg} strokeWidth={1.5} />
+      <View style={{ position: 'absolute', right: -28, top: -28, opacity: 0.09 }} importantForAccessibility="no-hide-descendants">
+        <next.Icon size={120} color={t.fg} strokeWidth={1.5} />
       </View>
       <T v="overline" color={t.sub}>
         Prochaine étape pour toi

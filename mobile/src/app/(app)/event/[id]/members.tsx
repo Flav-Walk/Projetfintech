@@ -3,11 +3,11 @@ import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { Copy, Link2, Mail, Share2, UserPlus, Users, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Pressable, Share, Switch, View } from 'react-native';
+import { Pressable, Share, View } from 'react-native';
 import { UserAvatar } from '@/components/avatar';
 import { BackHeader } from '@/components/back-header';
 import { ConfirmButton } from '@/components/confirm-button';
-import { CheckDot, ChoiceChip, Divider, Group, ListRow, SectionHeader, Segmented, Sheet, SkeletonList } from '@/components/kit';
+import { CheckDot, ChoiceChip, Divider, Group, ListRow, SectionHeader, Segmented, Sheet, SkeletonList, Toggle } from '@/components/kit';
 import { ErrorState } from '@/components/states';
 import { Banner, Button, Chip, Field, Row, Screen, T } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
@@ -424,7 +424,7 @@ function LinkInvite({ eventId, role }: { eventId: string; role: InviteRole }) {
               Sinon, le lien sert à plusieurs personnes.
             </T>
           </View>
-          <Switch value={singleUse} onValueChange={setSingleUse} trackColor={{ true: colors.violet, false: colors.border }} accessibilityLabel="Lien à usage unique" />
+          <Toggle value={singleUse} onValueChange={setSingleUse} label="Lien à usage unique" />
         </Row>
       ) : null}
       {error ? <Banner tone="error">{error}</Banner> : null}
