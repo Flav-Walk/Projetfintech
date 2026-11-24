@@ -1,6 +1,7 @@
 import { BADGE_LABELS, type BadgeKind } from '@complice/shared';
 import { Coins, Crown, HandHeart, Lightbulb, PenLine, Vote, type LucideIcon } from 'lucide-react-native';
-import { View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, View } from 'react-native';
 import Svg, { Circle, Rect } from 'react-native-svg';
 import { colors, fonts, space } from '@/theme/tokens';
 import { T } from './ui';
@@ -63,29 +64,54 @@ export function Stamp({ kind, earned, size = 64 }: { kind: BadgeKind; earned: bo
   );
 }
 
-/** Étagère de timbres d'un membre : chaque forme d'aide compte, sans lien avec un montant. */
+/** Ce que récompense chaque timbre (affiché au toucher, jamais tronqué). */
+const STAMP_DETAIL: Partial<Record<BadgeKind, string>> = {
+  proposer: 'proposer une idée de cadeau',
+  voter: 'voter pour une idée',
+  helper: 'terminer une mission',
+  wordsmith: 'déposer un mot dans la capsule',
+};
+
+/**
+ * Étagère de timbres : nom court toujours lisible (Idée, Voix, Coup de main, Plume) ; toucher un timbre
+ * affiche ce qu'il récompense. Chaque forme d'aide compte, sans lien avec un montant.
+ */
 export function StampShelf({ earned, compact = false }: { earned: Set<BadgeKind>; compact?: boolean }) {
-  const size = compact ? 44 : 60;
+  const size = compact ? 40 : 56;
+  const [focus, setFocus] = useState<BadgeKind | null>(null);
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: compact ? space.xs : space.md }}>
-      {STAMP_ORDER.map((k) => {
-        const has = earned.has(k);
-        return (
-          <View
-            key={k}
-            accessible
-            accessibilityLabel={`Timbre ${BADGE_LABELS[k].title} : ${has ? 'gagné' : `à gagner, ${BADGE_LABELS[k].hint.toLowerCase()}`}`}
-            style={{ alignItems: 'center', width: compact ? size : size + 14, gap: 4 }}
-          >
-            <Stamp kind={k} earned={has} size={size} />
-            {compact ? null : (
-              <T v="small" color={has ? colors.ink : colors.inkSoft} style={{ fontSize: 12, fontFamily: has ? fonts.bold : fonts.semiBold, textAlign: 'center' }} numberOfLines={2}>
-                {has ? BADGE_LABELS[k].title : BADGE_LABELS[k].hint}
-              </T>
-            )}
-          </View>
-        );
-      })}
+    <View style={{ gap: space.sm }}>
+      <View style={{ flexDirection: 'row', justifyContent: compact ? 'flex-start' : 'space-between', gap: compact ? space.xs : space.sm }}>
+        {STAMP_ORDER.map((k) => {
+          const has = earned.has(k);
+          const detail = STAMP_DETAIL[k] ?? BADGE_LABELS[k].hint.toLowerCase();
+          return (
+            <Pressable
+              key={k}
+              disabled={compact}
+              onPress={() => setFocus((f) => (f === k ? null : k))}
+              accessibilityRole={compact ? undefined : 'button'}
+              accessibilityLabel={`Timbre ${BADGE_LABELS[k].title} : ${has ? 'gagné' : 'à gagner'}, en ${detail}`}
+              hitSlop={4}
+              style={{ alignItems: 'center', minWidth: compact ? size : 64, gap: 6, transform: [{ rotate: has ? (k === 'voter' || k === 'wordsmith' ? '3deg' : '-3deg') : '0deg' }] }}
+            >
+              <Stamp kind={k} earned={has} size={size} />
+              {compact ? null : (
+                <T v="small" color={has ? colors.ink : colors.inkFaint} maxFontSizeMultiplier={1.3} style={{ fontFamily: has ? fonts.bold : fonts.semiBold, textAlign: 'center' }} numberOfLines={1}>
+                  {BADGE_LABELS[k].title}
+                </T>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+      {!compact && focus ? (
+        <T v="small" color={colors.inkSoft} accessibilityLiveRegion="polite">
+          <T v="small" style={{ fontFamily: fonts.bold }}>{BADGE_LABELS[focus].title}</T>
+          {earned.has(focus) ? ' · gagné en ' : ' · à gagner en '}
+          {STAMP_DETAIL[focus] ?? BADGE_LABELS[focus].hint.toLowerCase()}.
+        </T>
+      ) : null}
     </View>
   );
 }

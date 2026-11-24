@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from './ui';
 
 /** Action sensible en deux temps : un premier appui arme, le second confirme (5 s). */
-export function ConfirmButton({ label, confirmLabel, onConfirm, loading, variant = 'danger', compact = true }: { label: string; confirmLabel: string; onConfirm: () => void; loading?: boolean; variant?: 'danger' | 'outline' | 'secondary'; compact?: boolean }) {
+export function ConfirmButton({ label, confirmLabel, onConfirm, loading, variant = 'danger', compact = true }: { label: string; confirmLabel: string; onConfirm: () => void; loading?: boolean; variant?: 'danger' | 'outline' | 'secondary' | 'ghost'; compact?: boolean }) {
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!armed) return;

@@ -1,7 +1,7 @@
 import { formatCents, fundingLabel, STEP_LABELS, type EventFunding, type EventProgress } from '@complice/shared';
 import { Check, Lock } from 'lucide-react-native';
-import { useEffect } from 'react';
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { formatEventDate, timeUntil } from '@/lib/format';
 import { useNow } from '@/lib/use-now';
@@ -40,10 +40,11 @@ export function Meter({ value, track, fill, height = 10, label }: { value: numbe
  */
 export function FundingCard({ funding, children }: { funding: EventFunding; children?: React.ReactNode }) {
   const now = useNow();
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const label = fundingLabel(funding.percent, funding.goal_reached);
   const closeAt = new Date(funding.contributions_close_at).getTime();
   return (
-    <View style={{ backgroundColor: colors.coral, borderRadius: radius.card, padding: space.xl, gap: space.md, overflow: 'hidden' }}>
+    <View style={{ backgroundColor: colors.coral, borderRadius: radius.cover, padding: space.xl, gap: space.md, overflow: 'hidden' }}>
       <View style={{ position: 'absolute', right: -40, top: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.10)' }} />
       <T v="overline" color={colors.white} style={{ opacity: 0.9 }}>
         Cagnotte commune
@@ -85,12 +86,22 @@ export function FundingCard({ funding, children }: { funding: EventFunding; chil
           </T>
         </Row>
       </View>
-      <Row gap={6} style={{ alignItems: 'flex-start' }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: privacyOpen }}
+        accessibilityLabel="Parts individuelles privées. Plus d’informations"
+        onPress={() => setPrivacyOpen((o) => !o)}
+        hitSlop={8}
+        style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start', minHeight: 24 }}
+      >
         <Lock size={14} color={colors.white} style={{ marginTop: 2 }} />
-        <T v="small" color={colors.white} style={{ flex: 1, opacity: 0.95 }}>
-          Seul le total est partagé : personne ne voit combien chacun a donné. Dans un petit groupe, le total peut tout de même laisser deviner certaines parts.
+        <T v="small" color={colors.white} style={{ flex: 1 }}>
+          {privacyOpen
+            ? 'Seul le total est partagé : personne ne voit combien chacun a donné. Dans un petit groupe, le total peut tout de même laisser deviner certaines parts.'
+            : 'Parts individuelles privées'}
+          {privacyOpen ? null : <T v="small" color={colors.white} style={{ textDecorationLine: 'underline' }}>{'  En savoir plus'}</T>}
         </T>
-      </Row>
+      </Pressable>
       {children}
     </View>
   );

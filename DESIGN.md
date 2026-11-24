@@ -1,4 +1,23 @@
-# DESIGN.md — COMPLICE (v2, 2026-11-22)
+# DESIGN.md — COMPLICE (v3 « papier, ruban et tampon », 2026-11-24)
+
+## v3 : ce qui change (prime sur les sections v2 ci-dessous)
+- **Méthode** : guides `mobile-app-ui-design` (hiérarchie, 60/30/10, grille 8, règle pic-fin) et
+  `mobile-design` (cibles 44–48 px, zone du pouce, alternative à chaque geste, animations transform/opacité),
+  appliqués sans leurs consignes web (Tailwind, CSS) incompatibles avec le natif.
+- **Palette** : papier `#FBF5EE` (60 %), aubergine `#24123D` pour texte, bulles personnelles, boutons
+  secondaires et blocs forts (30 %), accents (10 %) : corail = argent/action principale, violet = organisation
+  (sélection, progression), soleil = célébration/idée, nuit = capsule et surprise. Plus d'aplats violets répétés.
+- **Typographie** : 5 tailles (34/24/19/16/13), Bricolage Grotesque pour titres et chiffres, Nunito pour le
+  texte, Caveat seulement pour le rendu d'un mot (jamais pour la saisie).
+- **Formes selon la fonction** : étiquette 8 (dates, statuts posés sur une image), champ 14, bloc 18,
+  couverture et cartes fortes 22, feuille 28, boutons en pilule. Ombres réservées aux éléments flottants.
+- **Composition** : sections sans carte séparées par un filet (« Le cadeau », « Échéances »…), couverture
+  pleine largeur en tête de cagnotte, cartes de l'accueil à couverture + échéance en étiquette, une seule
+  action principale par bloc, textes d'aide au toucher (« ? », « En savoir plus ») plutôt que permanents.
+- **Couvertures** : 6 illustrations SVG originales (`components/cover-art.tsx`) ; priorité photo → illustration
+  choisie → illustration selon l'occasion ; l'illustration est toujours dessous (`event-cover.tsx`).
+- **Mode démo** : jamais de bandeau ; une étiquette « Mode démo » repliable sur Participer, confirmations
+  « Participation enregistrée ».
 
 Jetons : `mobile/src/theme/tokens.ts`. Briques : `components/ui.tsx` (texte, bouton, champ, carte, bandeau),
 `components/kit.tsx` (feuille modale, segmenté, lignes, squelettes, balayage), `components/avatar.tsx`,

@@ -33,7 +33,7 @@ export function Segmented<K extends string>({
               if (!selected) hapticTap();
               onChange(o.key);
             }}
-            style={{ flex: 1, minHeight: 40, paddingHorizontal: space.sm, borderRadius: radius.pill, backgroundColor: selected ? colors.surface : 'transparent', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
+            style={{ flex: 1, minHeight: 44, paddingHorizontal: space.sm, borderRadius: radius.pill, backgroundColor: selected ? colors.surface : 'transparent', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
           >
             <T v="label" color={selected ? colors.ink : colors.inkSoft} numberOfLines={1}>
               {o.label}
@@ -83,7 +83,8 @@ export function ChoiceChip({ label, selected, onPress, icon, tone = 'violet' }: 
         hapticTap();
         onPress();
       }}
-      style={{ minHeight: 40, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1.5, borderColor: selected ? on : colors.border, backgroundColor: selected ? on : colors.surface, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+      android_ripple={{ color: colors.lavenderStrong }}
+      style={{ minHeight: 44, paddingHorizontal: 16, borderRadius: radius.pill, borderWidth: 1.5, borderColor: selected ? on : colors.border, backgroundColor: selected ? on : colors.surface, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 6 }}
     >
       {icon}
       <T v="label" color={selected ? colors.white : colors.ink}>
@@ -133,7 +134,7 @@ export function ListRow({
   const base: StyleProp<ViewStyle> = [{ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 60, paddingVertical: space.sm, backgroundColor: colors.surface }, style];
   if (!onPress) return <View style={base}>{body}</View>;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? title} onPress={onPress} style={({ pressed }) => [base, pressed && { opacity: 0.7 }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? title} onPress={onPress} android_ripple={{ color: colors.sand }} style={({ pressed }) => [base, pressed && Platform.OS !== 'android' && { opacity: 0.7 }]}>
       {body}
     </Pressable>
   );

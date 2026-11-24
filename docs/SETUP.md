@@ -19,7 +19,12 @@ Option A — un seul copier-coller (recommandé) :
 3. Avec une version de départ, le fichier commence par un garde-fou : il s'arrête sans rien modifier si
    une migration antérieure n'est pas enregistrée, ou si l'une des migrations incluses l'est déjà.
 
-État au 2026-11-22 : migrations 1 à 10 enregistrées et vérifiées à distance (`verify.sql` 13/13).
+État au 2026-11-24 : migrations 1 à 11 appliquées. **Migration 12 à appliquer**
+(`supabase/.bundle/apply-12.sql`, colonne `events.cover_art`, attendu « COMPLICE : 12 migrations
+enregistrées ») ; sans elle, choisir une illustration de couverture échoue (les photos fonctionnent).
+CORS de l'API : variable `ALLOWED_ORIGINS` (voir `backend/.env.example` et `render.yaml`).
+
+Historique — état au 2026-11-22 : migrations 1 à 10 enregistrées et vérifiées à distance (`verify.sql` 13/13).
 **Migration 11 à appliquer** : `npm run db:bundle -- 20261122001100` (déjà produit :
 `supabase/.bundle/apply-11.sql`), puis étape 2 ; résultat attendu « COMPLICE : 11 migrations
 enregistrées ». Elle ajoute un pseudo à chaque profil existant (sans toucher au reste), les tables

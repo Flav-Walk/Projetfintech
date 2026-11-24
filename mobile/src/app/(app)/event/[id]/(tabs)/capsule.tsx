@@ -1,14 +1,15 @@
 import { messageFor, type CapsuleStatus } from '@complice/shared';
-import { BookOpen, Eye, Gift, HeartHandshake, ImagePlus, LockKeyhole, Mail, X } from 'lucide-react-native';
+import { BookOpen, CircleHelp, Eye, Gift, HeartHandshake, ImagePlus, LockKeyhole, Mail, PenLine, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Modal, Pressable, RefreshControl, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
+import { Sheet } from '@/components/kit';
 import Animated, { FadeIn, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmButton } from '@/components/confirm-button';
 import { Mascot } from '@/components/mascot';
 import { PrivateImage } from '@/components/private-image';
 import { ErrorState, Loading } from '@/components/states';
-import { Banner, Button, Card, Chip, Row, T } from '@/components/ui';
+import { Banner, Button, Card, Row, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useCapsuleEntries, useCapsuleStats, useDeleteEntry, useMyEntry, useSaveEntry, useSaveThanks, useThanks } from '@/lib/capsule';
 import { formatEventDate, timeUntil } from '@/lib/format';
@@ -34,6 +35,7 @@ export default function Capsule() {
   const gift = useRevealedGift(id, revealed);
   const thanks = useThanks(id, revealed);
   const [story, setStory] = useState(false);
+  const [help, setHelp] = useState(false);
 
   if (event.isPending || progress.isPending) return <Loading />;
   if (!event.data || !progress.data) {
@@ -100,46 +102,91 @@ export default function Capsule() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: gutter, gap: space.lg, paddingBottom: space.xxxl }} keyboardShouldPersistTaps="handled">
-        <T v="h1" accessibilityRole="header">
-          La capsule
-        </T>
-        <SealedCard event={e} words={stats.data?.words ?? 0} photos={stats.data?.photos ?? 0} />
-        {mine.isPending ? (
-          <Loading />
-        ) : mine.isError ? (
-          <ErrorState error={mine.error} onRetry={() => mine.refetch()} />
-        ) : (
-          <EntryEditor key={mine.data?.id ?? 'new'} event={e} entry={mine.data} />
-        )}
-      </ScrollView>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ padding: gutter, gap: space.xl, paddingBottom: space.huge }} keyboardShouldPersistTaps="handled">
+          <Row style={{ justifyContent: 'space-between' }}>
+            <T v="display" accessibilityRole="header">
+              La capsule
+            </T>
+            <Pressable accessibilityRole="button" accessibilityLabel="Comment marche la capsule ?" onPress={() => setHelp(true)} hitSlop={6} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+              <CircleHelp size={22} color={colors.ink} />
+            </Pressable>
+          </Row>
+          <OpeningTicket event={e} photos={stats.data?.photos ?? 0} authors={stats.data?.authors ?? 0} />
+          {!isPreparer ? null : mine.isPending ? (
+            <Loading />
+          ) : mine.isError ? (
+            <ErrorState error={mine.error} onRetry={() => mine.refetch()} />
+          ) : (
+            <EntryEditor key={mine.data?.id ?? 'new'} event={e} entry={mine.data} />
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <CapsuleHelp visible={help} onClose={() => setHelp(false)} event={e} />
     </SafeAreaView>
   );
 }
 
-function SealedCard({ event, words, photos }: { event: EventRow; words: number; photos: number }) {
+/** Ticket d'ouverture : la date en grand, le compte à rebours réel, ce qui est déjà déposé (sans contenu). */
+function OpeningTicket({ event, photos, authors }: { event: EventRow; photos: number; authors: number }) {
   const now = useNow();
+  const d = new Date(event.reveal_at);
+  const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('fr-FR', { ...o, timeZone: event.timezone }).format(d);
   return (
-    <View style={{ backgroundColor: colors.night, borderRadius: radius.card, padding: space.xl, gap: space.md }}>
-      <Row>
-        <LockKeyhole size={26} color={colors.sun} strokeWidth={1.75} />
-        <View style={{ flex: 1 }}>
-          <T v="small" color={colors.lavenderStrong}>
-            Scellée jusqu’au
+    <View
+      accessible
+      accessibilityLabel={`La capsule s’ouvre le ${formatEventDate(event.reveal_at, event.timezone)}, ${timeUntil(event.reveal_at, now)}. ${authors} mot${authors > 1 ? 's' : ''} déposé${authors > 1 ? 's' : ''}.`}
+      style={{ backgroundColor: colors.night, borderRadius: radius.cover, flexDirection: 'row', overflow: 'hidden' }}
+    >
+      <View style={{ width: 92, alignItems: 'center', justifyContent: 'center', paddingVertical: space.lg, borderRightWidth: 2, borderRightColor: 'rgba(255,255,255,0.18)', borderStyle: 'dashed' }}>
+        <T v="overline" color={colors.sun}>
+          {fmt({ month: 'short' }).replace('.', '')}
+        </T>
+        <T v="money" color={colors.white} maxFontSizeMultiplier={1.2}>
+          {fmt({ day: 'numeric' })}
+        </T>
+        <T v="small" color={colors.lavenderStrong}>
+          {fmt({ hour: '2-digit', minute: '2-digit' })}
+        </T>
+      </View>
+      {/* Encoches du ticket */}
+      <View style={{ position: 'absolute', left: 82, top: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.bg }} />
+      <View style={{ position: 'absolute', left: 82, bottom: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.bg }} />
+      <View style={{ flex: 1, padding: space.lg, gap: 4, justifyContent: 'center' }}>
+        <Row gap={6}>
+          <LockKeyhole size={15} color={colors.sun} strokeWidth={2.25} />
+          <T v="overline" color={colors.sun}>
+            {timeUntil(event.reveal_at, now)}
           </T>
-          <T v="h3" color={colors.white}>
-            {formatEventDate(event.reveal_at, event.timezone)} · {timeUntil(event.reveal_at, now)}
-          </T>
-        </View>
-      </Row>
-      <Row gap={space.sm}>
-        <Chip label={`${words} mot${words > 1 ? 's' : ''}`} tone="sun" />
-        <Chip label={`${photos} photo${photos > 1 ? 's' : ''}`} tone="sun" />
-      </Row>
-      <T v="small" color={colors.lavenderStrong}>
-        Le contenu des mots reste secret, même pour l’organisation. Seuls les compteurs sont visibles.
-      </T>
+        </Row>
+        <T v="h2" color={colors.white}>
+          La capsule s’ouvre le jour J
+        </T>
+        <T v="small" color={colors.lavenderStrong}>
+          {authors === 0 ? 'Aucun mot déposé pour l’instant' : `${authors} mot${authors > 1 ? 's' : ''} déposé${authors > 1 ? 's' : ''}${photos ? ` · ${photos} photo${photos > 1 ? 's' : ''}` : ''}`}
+        </T>
+      </View>
     </View>
+  );
+}
+
+/** Aide contextuelle : ce que voient les autres, brouillon ou déposé, jusqu'à quand on peut modifier. */
+function CapsuleHelp({ visible, onClose, event }: { visible: boolean; onClose: () => void; event: EventRow }) {
+  const items: [string, string][] = [
+    ['Personne ne lit ton mot avant l’ouverture', 'Ni le groupe, ni l’organisation : seuls les compteurs (mots, photos) sont visibles.'],
+    ['Brouillon', 'Gardé pour toi seul. Il ne sera pas dans la capsule tant que tu ne le déposes pas.'],
+    ['Déposé', `Il fera partie de la capsule. Tu peux le modifier, le remettre en brouillon ou le supprimer jusqu’au ${formatEventDate(event.reveal_at, event.timezone)}.`],
+    ['À l’ouverture', `${event.beneficiary_name} et le groupe découvrent tous les mots déposés. Ils ne sont plus modifiables.`],
+  ];
+  return (
+    <Sheet visible={visible} onClose={onClose} title="Comment marche la capsule ?">
+      {items.map(([t, d]) => (
+        <View key={t} style={{ gap: 2 }}>
+          <T v="bodyBold">{t}</T>
+          <T color={colors.inkSoft}>{d}</T>
+        </View>
+      ))}
+    </Sheet>
   );
 }
 
@@ -229,7 +276,7 @@ function EntryEditor({ event, entry }: { event: EventRow; entry: CapsuleEntryRow
     setError(null);
     setSaved(null);
     if (next === 'published' && empty) {
-      setError('Ajoute un mot ou une photo avant de sceller.');
+      setError('Ajoute un mot ou une photo avant de le déposer.');
       return;
     }
     setBusy(true);
@@ -244,7 +291,7 @@ function EntryEditor({ event, entry }: { event: EventRow; entry: CapsuleEntryRow
       if (previous && previous !== path) await supabase.storage.from('event-media').remove([previous]);
       setPicked(null);
       setPhotoPath(path);
-      setSaved(next === 'published' ? 'Ton mot est scellé dans la capsule.' : 'Brouillon enregistré. Personne d’autre ne le voit.');
+      setSaved(next === 'published' ? 'Ton mot est dans la capsule. Tu peux encore le modifier jusqu’à l’ouverture.' : 'Brouillon enregistré : personne d’autre ne le voit.');
     } catch (err) {
       setError(messageFor(err));
     } finally {
@@ -252,101 +299,139 @@ function EntryEditor({ event, entry }: { event: EventRow; entry: CapsuleEntryRow
     }
   };
 
+  const until = formatEventDate(event.reveal_at, event.timezone, false);
+  const statusLine = dirty
+    ? { dot: colors.sun, text: 'Modifications non enregistrées' }
+    : status === 'published'
+      ? { dot: colors.success, text: `Déposé dans la capsule · modifiable jusqu’au ${until}` }
+      : entry
+        ? { dot: colors.inkFaint, text: 'Brouillon · visible de toi seul' }
+        : { dot: colors.inkFaint, text: 'Pas encore commencé' };
+  const pick = async () => {
+    try {
+      const img = await pickImage([1, 1]);
+      if (img) setPicked(img);
+    } catch {
+      setError('Impossible d’ouvrir la galerie.');
+    }
+  };
+
   return (
     <View style={{ gap: space.lg }}>
       <Row style={{ justifyContent: 'space-between' }}>
-        <T v="h3" style={{ flex: 1 }}>
-          Mon mot pour {event.beneficiary_name}
-        </T>
-        <Chip label={status === 'published' ? 'Scellé' : entry ? 'Brouillon' : 'Nouveau'} tone={status === 'published' ? 'lavender' : 'grey'} />
+        <T v="h1">Mon mot</T>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={preview ? 'Revenir à l’écriture' : 'Voir l’aperçu de ton mot'}
+          onPress={() => setPreview((v) => !v)}
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: space.lg, borderRadius: radius.pill, backgroundColor: pressed ? colors.lavenderStrong : colors.lavender })}
+        >
+          {preview ? <PenLine size={17} color={colors.violetDark} /> : <Eye size={17} color={colors.violetDark} />}
+          <T v="label" color={colors.violetDark}>
+            {preview ? 'Écrire' : 'Aperçu'}
+          </T>
+        </Pressable>
       </Row>
 
-      <Banner tone="info" icon={<Eye size={22} color={colors.violet} />}>
-        {`Toi seul vois ce mot avant l’ouverture. Brouillon : gardé pour toi, jamais montré. Scellé : ${event.beneficiary_name} et le groupe le découvriront le ${formatEventDate(event.reveal_at, event.timezone)}.`}
-      </Banner>
-      {restoredUnsaved ? (
-        <Banner tone="warning" title="Texte retrouvé sur ce téléphone">
-          Tu avais commencé à écrire sans enregistrer. Enregistre ton brouillon ou scelle ton mot pour ne pas le perdre.
-        </Banner>
-      ) : null}
-
       {preview ? (
-        <MemoryCard
-          entry={{ id: 'preview', event_id: event.id, author_id: session?.user.id ?? '', body: body.trim() || null, photo_path: photoPath, status, published_at: null, updated_at: '', profiles: { display_name: 'Moi' } }}
-          localUri={picked?.uri}
-          light
-        />
-      ) : (
-        <View style={{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, padding: space.lg, gap: space.sm }}>
-          <TextInput
-            value={body}
-            onChangeText={setBody}
-            multiline
-            maxLength={1000}
-            placeholder={`Joyeux anniversaire ${event.beneficiary_name} !`}
-            placeholderTextColor={colors.inkFaint}
-            accessibilityLabel="Ton mot pour la capsule"
-            style={[type.hand, { minHeight: 140, textAlignVertical: 'top', color: colors.ink, fontSize: 24, lineHeight: 30 }]}
+        empty ? (
+          <T color={colors.inkSoft}>Rien à prévisualiser : écris quelques mots ou ajoute une photo.</T>
+        ) : (
+          <MemoryCard
+            entry={{ id: 'preview', event_id: event.id, author_id: session?.user.id ?? '', body: body.trim() || null, photo_path: photoPath, status, published_at: null, updated_at: '', profiles: { display_name: 'Moi' } }}
+            localUri={picked?.uri}
+            light
           />
-          <T v="small" color={colors.inkSoft} style={{ alignSelf: 'flex-end' }}>
-            {body.length}/1000
-          </T>
+        )
+      ) : (
+        <View style={{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+          <View style={{ height: 6, backgroundColor: colors.coral }} />
+          <View style={{ padding: space.lg, gap: space.sm }}>
+            <T v="hand" color={colors.coralInk}>
+              Pour {event.beneficiary_name},
+            </T>
+            <TextInput
+              value={body}
+              onChangeText={setBody}
+              multiline
+              maxLength={1000}
+              placeholder="Écris ton mot ici…"
+              placeholderTextColor={colors.inkFaint}
+              accessibilityLabel={`Ton mot pour ${event.beneficiary_name}`}
+              style={[type.body, { minHeight: 132, textAlignVertical: 'top', color: colors.ink, fontSize: 17, lineHeight: 26, paddingVertical: 0 }]}
+            />
+            <Row style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              {picked || photoPath ? (
+                <View>
+                  <PrivateImage path={photoPath} localUri={picked?.uri} style={{ width: 84, height: 84, borderRadius: radius.field }} label="Photo de ton mot" />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Retirer la photo"
+                    hitSlop={10}
+                    onPress={() => {
+                      setPicked(null);
+                      setPhotoPath(null);
+                    }}
+                    style={{ position: 'absolute', top: -8, right: -8, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <X size={15} color={colors.white} strokeWidth={2.5} />
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Ajouter une photo à ton mot"
+                  onPress={pick}
+                  style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: pressed ? colors.sand : colors.surfaceSoft })}
+                >
+                  <ImagePlus size={18} color={colors.ink} />
+                  <T v="label">Photo</T>
+                </Pressable>
+              )}
+              <T v="small" color={body.length > 900 ? colors.coralInk : colors.inkFaint}>
+                {body.length}/1000
+              </T>
+            </Row>
+          </View>
         </View>
       )}
 
-      {picked || photoPath ? (
-        <View>
-          <PrivateImage path={photoPath} localUri={picked?.uri} style={{ width: '100%', aspectRatio: 1, borderRadius: radius.card }} label="Photo de ton mot" />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Retirer la photo"
-            onPress={() => {
-              setPicked(null);
-              setPhotoPath(null);
-            }}
-            style={{ position: 'absolute', top: 8, right: 8, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <X size={20} color={colors.ink} />
-          </Pressable>
-        </View>
-      ) : (
-        <Button
-          variant="outline"
-          compact
-          label="Ajouter une photo"
-          icon={<ImagePlus size={18} color={colors.ink} />}
-          onPress={async () => {
-            try {
-              const img = await pickImage([1, 1]);
-              if (img) setPicked(img);
-            } catch {
-              setError('Impossible d’ouvrir la galerie.');
-            }
-          }}
-        />
-      )}
+      <Row gap={space.sm} style={{ alignItems: 'flex-start' }}>
+        <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: statusLine.dot, marginTop: 5 }} />
+        <T v="small" color={colors.inkSoft} style={{ flex: 1 }} accessibilityLiveRegion="polite">
+          {statusLine.text}
+          {restoredUnsaved ? ' · texte retrouvé sur ce téléphone' : ''}
+        </T>
+      </Row>
 
       {error ? <Banner tone="error">{error}</Banner> : null}
-      {saved && !dirty ? <Banner tone="info">{saved}</Banner> : null}
+      {saved && !dirty ? (
+        <T v="small" color={colors.success} accessibilityLiveRegion="polite">
+          {saved}
+        </T>
+      ) : null}
 
-      <Button compact variant="ghost" label={preview ? 'Revenir à l’écriture' : 'Prévisualiser'} icon={<Eye size={16} color={colors.ink} />} onPress={() => setPreview((v) => !v)} />
-      <Button
-        variant="secondary"
-        label={status === 'published' ? (dirty ? 'Mettre à jour mon mot scellé' : 'Mot scellé') : 'Sceller mon mot'}
-        icon={<Mail size={20} color={colors.white} />}
-        disabled={status === 'published' && !dirty}
-        loading={busy}
-        onPress={() => persist('published')}
-      />
-      {status === 'draft' ? (
-        <Button variant="outline" label="Enregistrer le brouillon" disabled={!dirty || empty} loading={busy} onPress={() => persist('draft')} />
-      ) : (
-        <Button variant="ghost" compact label="Repasser en brouillon" loading={busy} onPress={() => persist('draft')} />
-      )}
-      {entry ? <ConfirmButton label="Supprimer mon mot" confirmLabel="Supprimer définitivement" loading={del.isPending} onConfirm={() => del.mutate(entry)} /> : null}
-      <T v="small" color={colors.inkSoft}>
-        Modifiable jusqu’à l’ouverture. Ensuite, la capsule est scellée pour de bon.
-      </T>
+      <View style={{ gap: space.sm }}>
+        {status === 'published' && !dirty ? null : (
+          <Button
+            variant="secondary"
+            label={status === 'published' ? 'Enregistrer les modifications' : 'Déposer dans la capsule'}
+            icon={<Mail size={19} color={colors.white} />}
+            disabled={empty}
+            loading={busy}
+            onPress={() => persist('published')}
+            accessibilityHint={`Ton mot restera modifiable jusqu’au ${until}.`}
+          />
+        )}
+        <Row style={{ justifyContent: 'center', flexWrap: 'wrap' }} gap={space.sm}>
+          {status === 'draft' ? (
+            <Button variant="ghost" compact label="Garder en brouillon" disabled={!dirty || empty} loading={busy} onPress={() => persist('draft')} />
+          ) : (
+            <Button variant="ghost" compact label="Remettre en brouillon" loading={busy} onPress={() => persist('draft')} />
+          )}
+          {entry ? <ConfirmButton variant="ghost" label="Supprimer" confirmLabel="Supprimer mon mot" loading={del.isPending} onConfirm={() => del.mutate(entry)} /> : null}
+        </Row>
+      </View>
     </View>
   );
 }

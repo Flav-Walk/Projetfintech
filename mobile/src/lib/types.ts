@@ -9,6 +9,8 @@ export interface EventRow {
   occasion: string;
   description: string | null;
   cover_path: string | null;
+  /** Illustration de la bibliothèque COMPLICE (migration 12), utilisée sans photo. */
+  cover_art?: string | null;
   currency: 'EUR';
   // Aucun montant ici : objectif et total sont dans event_finances (migration 8), lus via event_funding.
   gift_at: string;
@@ -132,7 +134,7 @@ export interface MessageRow {
   body: string;
   client_id: string | null;
   created_at: string;
-  profiles: Pick<Profile, 'display_name'> | null;
+  profiles: (Pick<Profile, 'display_name'> & { avatar_path?: string | null }) | null;
 }
 
 export interface CapsuleEntryRow {

@@ -36,7 +36,7 @@ export function useMessages(eventId: string) {
     queryFn: async ({ pageParam }) => {
       let q = supabase
         .from('messages')
-        .select('id, event_id, author_id, body, client_id, created_at, profiles(display_name)')
+        .select('id, event_id, author_id, body, client_id, created_at, profiles(display_name, avatar_path)')
         .eq('event_id', eventId)
         .order('created_at', { ascending: false })
         .limit(PAGE);

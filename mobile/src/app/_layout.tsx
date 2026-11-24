@@ -9,13 +9,24 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Banner, T } from '@/components/ui';
+import { Banner, Button, T } from '@/components/ui';
 import { AuthProvider } from '@/lib/auth';
 import { isSupabaseConfigured } from '@/lib/env';
 import { ToastProvider } from '@/lib/toast';
 import { colors } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/** Barrière d'erreur (Expo Router) : un écran qui plante affiche ceci au lieu d'une page blanche. */
+export function ErrorBoundary({ retry }: { error: Error; retry: () => Promise<void> }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', padding: 24, gap: 16 }} accessibilityRole="alert">
+      <T v="h1">Oups, cet écran a trébuché</T>
+      <T color={colors.inkSoft}>Rien n’est perdu : tes données sont enregistrées. Réessaie, ou reviens à l’accueil.</T>
+      <Button label="Réessayer" onPress={() => void retry()} />
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

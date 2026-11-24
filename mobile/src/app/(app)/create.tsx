@@ -1,19 +1,21 @@
 import { formatCents, messageFor, parseAmountToCents, TARGET_MAX_CENTS, TARGET_MIN_CENTS } from '@complice/shared';
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Eye, EyeOff, ImagePlus, X } from 'lucide-react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 import { BackButton } from '@/components/back-header';
+import { CoverPicker, type CoverChoice } from '@/components/cover-picker';
 import { DateField } from '@/components/date-field';
 import { Banner, Button, Card, Field, ProgressBar, Row, Screen, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { artForOccasion } from '@/lib/covers';
 import { deviceTimezone } from '@/lib/format';
-import { pickImage, uploadImage, type PickedImage } from '@/lib/media';
+import { uploadImage } from '@/lib/media';
 import { useCreateEvent } from '@/lib/queries';
-import { colors, radius, space } from '@/theme/tokens';
+import { supabase } from '@/lib/supabase';
+import { colors, space } from '@/theme/tokens';
 
-const OCCASIONS = ['anniversaire', 'départ', 'naissance', 'mariage', 'pot de thèse', 'remerciement', 'autre'];
+const OCCASIONS = ['anniversaire', 'soirée', 'départ', 'naissance', 'mariage', 'entre amis', 'autre'];
 
 /**
  * Modèles : des valeurs de départ raisonnables, toutes modifiables. Ils ne recopient jamais le contenu
@@ -47,7 +49,9 @@ export default function CreateEvent() {
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
   const [publicVotes, setPublicVotes] = useState(false);
-  const [cover, setCover] = useState<PickedImage | null>(null);
+  // Couverture : illustration selon l'occasion tant que rien n'est choisi, photo ou illustration ensuite.
+  const [coverChoice, setCoverChoice] = useState<CoverChoice | null>(null);
+  const cover: CoverChoice = coverChoice ?? { kind: 'art', art: artForOccasion(occasion) };
   const [initialGift] = useState(defaultGiftDate);
   const [giftAt, setGiftAt] = useState(initialGift);
   const [votesAt, setVotesAt] = useState(shift(initialGift, -5));
@@ -101,9 +105,9 @@ export default function CreateEvent() {
     setFormError(null);
     try {
       let coverPath: string | null = null;
-      if (cover) {
+      if (cover.kind === 'photo') {
         setUploading(true);
-        coverPath = await uploadImage('event-media', `${session.user.id}/covers`, cover);
+        coverPath = await uploadImage('event-media', `${session.user.id}/covers`, cover.picked);
         setUploading(false);
       }
       const id = await create.mutateAsync({
@@ -120,6 +124,8 @@ export default function CreateEvent() {
         voteVisibility: publicVotes ? 'public' : 'private',
         coverPath,
       });
+      // Illustration choisie : enregistrée juste après la création (organisateur = gestionnaire).
+      if (cover.kind === 'art') await supabase.from('events').update({ cover_art: cover.art }).eq('id', id);
       router.replace({ pathname: '/event/[id]', params: { id, created: '1' } });
     } catch (e) {
       setUploading(false);
@@ -188,7 +194,7 @@ export default function CreateEvent() {
                   style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: occasion === o ? colors.violet : colors.border, backgroundColor: occasion === o ? colors.lavender : colors.surface }}
                 >
                   <T v="label" color={occasion === o ? colors.violetDark : colors.ink}>
-                    {o}
+                    {o.charAt(0).toUpperCase() + o.slice(1)}
                   </T>
                 </Pressable>
               ))}
@@ -197,17 +203,8 @@ export default function CreateEvent() {
           <Field label="Titre" value={title} onChangeText={setTitle} placeholder={suggestedTitle || 'Les 25 ans de Camille'} maxLength={80} error={errors.title} hint={!title && suggestedTitle ? `Si vide : « ${suggestedTitle} »` : undefined} />
           <Field label="Description (facultatif)" value={description} onChangeText={setDescription} multiline maxLength={600} placeholder="Une idée de l’ambiance, ce qu’elle aime…" />
           <View style={{ gap: 6 }}>
-            <T v="label">Image (facultatif)</T>
-            {cover ? (
-              <View>
-                <Image source={{ uri: cover.uri }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: radius.card }} contentFit="cover" accessibilityLabel="Image de couverture choisie" />
-                <Pressable accessibilityRole="button" accessibilityLabel="Retirer l’image" onPress={() => setCover(null)} style={{ position: 'absolute', top: 10, right: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' }}>
-                  <X size={20} color={colors.ink} />
-                </Pressable>
-              </View>
-            ) : (
-              <Button label="Choisir une image" variant="outline" icon={<ImagePlus size={20} color={colors.ink} strokeWidth={1.75} />} onPress={async () => setCover(await pickImage())} />
-            )}
+            <T v="label">Couverture</T>
+            <CoverPicker value={cover} onChange={setCoverChoice} occasion={occasion} onError={setFormError} />
           </View>
         </>
       ) : null}

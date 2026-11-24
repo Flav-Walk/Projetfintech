@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { useReducedMotion } from 'react-native-reanimated';
-import { colors, fonts, gutter, radius, shadow, space, type } from '@/theme/tokens';
+import { colors, fonts, gutter, radius, space, type } from '@/theme/tokens';
 
 // ------------------------------------------------------------------ Texte
 type Variant = keyof typeof type;
@@ -69,7 +69,7 @@ export function Screen({
 }
 
 // ------------------------------------------------------------------ Bouton
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'white';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'white' | 'soft';
 
 export function Button({
   label,
@@ -105,18 +105,19 @@ export function Button({
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
       onPress={onPress}
+      android_ripple={{ color: palette.pressed, borderless: false }}
       style={({ pressed }) => [
         styles.button,
         compact && styles.buttonCompact,
         { backgroundColor: palette.bg, borderColor: palette.border },
-        pressed && !reduceMotion && { transform: [{ scale: 0.98 }] },
+        pressed && !reduceMotion && { transform: [{ scale: 0.97 }] },
         pressed && { backgroundColor: palette.pressed },
-        disabled && !loading && { opacity: 0.45 },
+        disabled && !loading && { opacity: 0.4 },
         style,
       ]}
     >
       {loading ? <ActivityIndicator color={palette.fg} /> : icon}
-      <T v="bodyBold" color={palette.fg} style={{ fontSize: compact ? 15 : 17 }}>
+      <T v="bodyBold" color={palette.fg} numberOfLines={1} style={{ fontSize: compact ? 15 : 16, flexShrink: 1 }}>
         {label}
       </T>
       {!loading && iconRight}
@@ -126,11 +127,12 @@ export function Button({
 
 const buttonPalette: Record<ButtonVariant, { bg: string; fg: string; border: string; pressed: string }> = {
   primary: { bg: colors.coral, fg: colors.white, border: colors.coral, pressed: colors.coralDark },
-  secondary: { bg: colors.violet, fg: colors.white, border: colors.violet, pressed: colors.violetDark },
-  outline: { bg: colors.surface, fg: colors.ink, border: colors.ink, pressed: colors.surfaceSoft },
-  ghost: { bg: 'transparent', fg: colors.ink, border: 'transparent', pressed: colors.surfaceSoft },
-  danger: { bg: colors.surface, fg: colors.danger, border: colors.danger, pressed: colors.dangerSoft },
-  white: { bg: colors.white, fg: colors.coral, border: colors.white, pressed: colors.coralSoft },
+  secondary: { bg: colors.ink, fg: colors.white, border: colors.ink, pressed: colors.plum },
+  outline: { bg: 'transparent', fg: colors.ink, border: colors.ink, pressed: colors.sand },
+  ghost: { bg: 'transparent', fg: colors.ink, border: 'transparent', pressed: colors.sand },
+  danger: { bg: 'transparent', fg: colors.danger, border: colors.danger, pressed: colors.dangerSoft },
+  white: { bg: colors.white, fg: colors.coralInk, border: colors.white, pressed: colors.coralSoft },
+  soft: { bg: colors.lavender, fg: colors.violetDark, border: colors.lavender, pressed: colors.lavenderStrong },
 };
 
 // ------------------------------------------------------------------ Champ
@@ -205,7 +207,7 @@ export function Card({
     violet: colors.violet,
     coral: colors.coral,
   }[tone];
-  const base = [styles.card, { backgroundColor: bg }, tone === 'surface' && styles.cardBorder, style];
+  const base = [styles.card, { backgroundColor: bg }, (tone === 'surface' || tone === 'soft') && styles.cardBorder, style];
   if (!onPress) return <View style={base}>{children}</View>;
   return (
     <Pressable
@@ -295,14 +297,15 @@ const styles = StyleSheet.create({
   screenContent: { paddingHorizontal: gutter, paddingTop: space.lg, paddingBottom: space.xxxl, gap: space.lg },
   footer: { paddingHorizontal: gutter, paddingTop: space.md, paddingBottom: space.lg, backgroundColor: 'transparent' },
   button: {
-    minHeight: 54,
+    minHeight: 52,
     borderRadius: radius.button,
     borderWidth: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.sm,
-    paddingHorizontal: space.xl,
+    paddingHorizontal: space.xxl,
+    overflow: 'hidden',
   },
   buttonCompact: { minHeight: 44, paddingHorizontal: space.lg },
   field: {
@@ -317,8 +320,8 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   input: { flex: 1, fontFamily: fonts.semiBold, fontSize: 16, color: colors.ink, paddingVertical: 12 },
-  card: { borderRadius: radius.card, padding: space.lg, ...shadow.card },
+  card: { borderRadius: radius.card, padding: space.lg },
   cardBorder: { borderWidth: 1, borderColor: colors.border },
   chip: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
-  banner: { borderRadius: radius.field, padding: space.md, flexDirection: 'row', gap: space.md, alignItems: 'center' },
+  banner: { borderRadius: radius.field, paddingVertical: space.md - 2, paddingHorizontal: space.md, flexDirection: 'row', gap: space.sm + 2, alignItems: 'center' },
 });

@@ -9,11 +9,12 @@ import {
   type ContributionResponse,
 } from '@complice/shared';
 import { router } from 'expo-router';
-import { CircleAlert, FlaskConical, PartyPopper, ShieldCheck } from 'lucide-react-native';
+import { CircleAlert, PartyPopper, ShieldCheck } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, Switch, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { BackHeader } from '@/components/back-header';
 import { FundingCard } from '@/components/event-parts';
+import { Toggle } from '@/components/kit';
 import { Mascot } from '@/components/mascot';
 import { ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Chip, Field, Row, Screen, T } from '@/components/ui';
@@ -112,7 +113,7 @@ export default function Contribute() {
             label={networkError ? 'Réessayer' : `Confirmer ${formatCents((cents ?? 0) + SIMULATED_FEE_CENTS)}`}
             loading={contribute.isPending}
             onPress={() => send(networkError && attempt ? attempt : attempt ?? newAttempt(cents!))}
-            accessibilityHint="Paiement simulé : aucun argent réel n’est débité"
+            accessibilityHint="Mode démo : participation enregistrée sans paiement réel"
           />
         ) : result?.status === 'confirmed' ? (
           <Button label="Retour à l’événement" onPress={() => router.back()} />
@@ -134,10 +135,6 @@ export default function Contribute() {
         title={step === 'result' ? 'Participation' : step === 'recap' ? 'Récapitulatif' : 'Participer'}
         subtitle={step === 'amount' ? `Pour ${e.beneficiary_name} · ${e.title}` : undefined}
       />
-
-      <Banner tone="demo" title="Paiement simulé" icon={<FlaskConical size={22} color={colors.ink} />}>
-        Aucun argent réel n’est débité. Le parcours est complet pour tester l’app.
-      </Banner>
 
       {resumable && step === 'amount' ? (
         <Card tone="soft" style={{ gap: space.sm }}>
@@ -234,30 +231,25 @@ export default function Contribute() {
         <>
           <Card style={{ gap: space.md }}>
             <RecapLine label="Ta participation" value={formatCents(cents, { forceDecimals: true })} />
-            <RecapLine label="Frais" value={`${formatCents(SIMULATED_FEE_CENTS, { forceDecimals: true })} (simulation)`} />
+            <RecapLine label="Frais" value={SIMULATED_FEE_CENTS === 0 ? 'Aucun' : formatCents(SIMULATED_FEE_CENTS, { forceDecimals: true })} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
             <RecapLine label="Total" value={formatCents(cents + SIMULATED_FEE_CENTS, { forceDecimals: true })} strong />
           </Card>
-          <Banner tone="info" icon={<ShieldCheck size={22} color={colors.violet} />}>
-            Ton montant n’est visible que par toi. Le groupe voit le total de la cagnotte, et le fil annonce une nouvelle
-            participation sans dire de qui ni combien. Dans un petit groupe, le total peut tout de même laisser deviner certaines parts.
-          </Banner>
-          <Card tone="soft">
+          <Row gap={space.sm} style={{ alignItems: 'flex-start' }}>
+            <ShieldCheck size={18} color={colors.violet} style={{ marginTop: 2 }} />
+            <T v="small" color={colors.inkSoft} style={{ flex: 1 }}>
+              Ton montant reste privé : le groupe voit seulement le total.
+            </T>
+          </Row>
+          <DemoNotice />
+          {__DEV__ ? (
             <Row style={{ justifyContent: 'space-between' }}>
-              <View style={{ flex: 1 }}>
-                <T v="label">Tester un refus</T>
-                <T v="small" color={colors.inkSoft}>
-                  Mode test : simule une carte refusée.
-                </T>
-              </View>
-              <Switch
-                value={simulateFailure}
-                onValueChange={setSimulateFailure}
-                accessibilityLabel="Simuler un paiement refusé"
-                trackColor={{ true: colors.coral, false: colors.border }}
-              />
+              <T v="small" color={colors.inkSoft} style={{ flex: 1 }}>
+                Outil de développement : simuler un refus
+              </T>
+              <Toggle value={simulateFailure} onValueChange={setSimulateFailure} label="Simuler un refus (développement)" />
             </Row>
-          </Card>
+          ) : null}
           {contribute.isError ? (
             <Banner tone="error" title={networkError ? 'Pas de réponse du serveur' : 'Participation impossible'}>
               {networkError
@@ -275,11 +267,9 @@ export default function Contribute() {
             <Mascot size={96} mood="wink" />
             <Row gap={space.sm}>
               <PartyPopper size={24} color={colors.violet} />
-              <T v="h2">Merci !</T>
+              <T v="h2">Participation enregistrée</T>
             </Row>
-            <T style={{ textAlign: 'center' }}>
-              Ta participation de {formatCents(result.amount_cents)} est confirmée{result.is_simulated ? ' (simulation)' : ''}.
-            </T>
+            <T style={{ textAlign: 'center' }}>Merci ! Ta participation de {formatCents(result.amount_cents)} compte maintenant dans la cagnotte du groupe.</T>
             {funding.data ? (
               <T v="small" color={colors.inkSoft} style={{ textAlign: 'center' }}>
                 La cagnotte du groupe atteint {formatCents(funding.data.collected_cents)} sur {formatCents(funding.data.target_cents)}.
@@ -289,9 +279,9 @@ export default function Contribute() {
         ) : (
           <Card style={{ alignItems: 'center', gap: space.md }}>
             <CircleAlert size={40} color={colors.danger} />
-            <T v="h2">Paiement refusé</T>
+            <T v="h2">Participation non enregistrée</T>
             <T color={colors.inkSoft} style={{ textAlign: 'center' }}>
-              Rien n’a été débité. Tu peux réessayer avec le même montant ou en changer.
+              Elle n’a pas été comptée. Tu peux réessayer avec le même montant ou en changer.
             </T>
           </Card>
         )
@@ -313,7 +303,6 @@ export default function Contribute() {
                   <T v="bodyBold">{formatCents(c.amount_cents)}</T>
                   <T v="small" color={colors.inkSoft}>
                     {formatEventDate(c.created_at, e.timezone)}
-                    {c.is_simulated ? ' · simulation' : ''}
                   </T>
                 </View>
                 <Chip label={STATUS_LABEL[c.status].label} tone={STATUS_LABEL[c.status].tone} />
@@ -323,6 +312,33 @@ export default function Contribute() {
         )}
       </View>
     </Screen>
+  );
+}
+
+/**
+ * « Mode démo » discret : l'app ne passe par aucun prestataire de paiement, ne demande ni carte ni
+ * coordonnées bancaires, et n'affirme jamais qu'un débit ou un virement a eu lieu.
+ */
+function DemoNotice() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel="Mode démo. Plus d’informations" onPress={() => setOpen((o) => !o)} hitSlop={8} style={{ gap: 4 }}>
+      <Row gap={6}>
+        <View style={{ backgroundColor: colors.sunSoft, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+          <T v="small" color={colors.sunInk} style={{ fontFamily: fonts.bold, fontSize: 12 }}>
+            Mode démo
+          </T>
+        </View>
+        <T v="small" color={colors.inkSoft} style={{ textDecorationLine: open ? 'none' : 'underline' }}>
+          {open ? 'Aucune carte bancaire n’est demandée.' : 'En savoir plus'}
+        </T>
+      </Row>
+      {open ? (
+        <T v="small" color={colors.inkSoft}>
+          Cette version de COMPLICE enregistre les participations sans paiement réel : aucun argent n’est prélevé ni versé.
+        </T>
+      ) : null}
+    </Pressable>
   );
 }
 

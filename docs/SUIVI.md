@@ -1,5 +1,29 @@
 # Suivi des lots
 
+## Lot 8 — Refonte UI/UX, CORS, couvertures (2026-11-24)
+
+- **CORS** : cause = `ALLOWED_ORIGINS` absent sur Render → plugin CORS en `origin: false` → preflight 404
+  sans en-tête (reproduit sur Render `3041d88`). Correctif : liste configurable et validée (origines Expo web
+  locales par défaut, jamais `*`), méthodes GET/POST/DELETE/OPTIONS, en-têtes Authorization/Content-Type,
+  en-têtes présents sur les erreurs. Testé : 2 tests API + requêtes réelles depuis l'origine
+  `http://localhost:8081` (preflight 204, lecture 200, création 201, 401 lisible, origine inconnue refusée).
+  **Effectif sur Render seulement après déploiement de `backend`.**
+- **Couvertures blanches** : cause = envoi par `fetch(uri).arrayBuffer()` qui produisait un fichier de
+  14 octets (« Anniversaire flav ») ; ni le bucket ni l'URL signée en cause. Correctif : lecture base64 du
+  sélecteur, contrôle de la signature (JPEG/PNG/WebP/HEIC) et de la taille ; illustration toujours dessinée
+  sous la photo (jamais de rectangle vide). Bibliothèque de 6 couvertures COMPLICE dessinées en SVG
+  (migration 12 `cover_art`, **à appliquer** : `supabase/.bundle/apply-12.sql`). Choix photo/illustration
+  avec aperçu à la création et dans les réglages.
+- **`content.js` 403** : n'existe ni dans l'app ni dans ses dépendances ; nom typique d'un script injecté
+  par une extension du navigateur. Navigateur de test sans extension : aucune erreur de console.
+- **Refonte** (jetons v3, DESIGN.md) : accueil avant connexion (scène illustrée + promesse), cartes à
+  couverture, accueil de cagnotte (couverture pleine largeur, prochaine étape, « Le cadeau », « Échéances »
+  regroupées), timbres à noms courts, capsule (ticket d'ouverture, lettre, aperçu, « Déposer »), discussion
+  (groupes de messages, jours, saisie), mentions de prototype retirées (« Mode démo » discret).
+- Vérifié : SQL 60, shared 6, backend 16, mobile 11 (**93**) ; typage, lint ; 72 captures web sur 320, 360,
+  390 et 412 px sans débordement ni erreur de console ; planches avant/après dans [captures/](captures/).
+  Non vérifié : téléphone (clavier, zones sûres natives, grandes polices, lecteur d'écran), Render déployé.
+
 ## Lot 7 — Amis, invitations nominatives, total de cagnotte, refonte (2026-11-22)
 
 - **Base (migration 11, à appliquer : `supabase/.bundle/apply-11.sql`)** : pseudo unique, recherche, amis,

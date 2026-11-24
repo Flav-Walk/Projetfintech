@@ -210,7 +210,7 @@ export function useCreateEvent() {
 }
 
 export type EventSettingsPatch = Partial<
-  Pick<EventRow, 'title' | 'beneficiary_name' | 'occasion' | 'description' | 'gift_at' | 'votes_close_at' | 'contributions_close_at' | 'reveal_at' | 'vote_visibility'>
+  Pick<EventRow, 'title' | 'beneficiary_name' | 'occasion' | 'description' | 'gift_at' | 'votes_close_at' | 'contributions_close_at' | 'reveal_at' | 'vote_visibility' | 'cover_path' | 'cover_art'>
 >;
 
 export function useUpdateEvent(id: string) {

@@ -9,7 +9,7 @@ import { UserAvatar } from '@/components/avatar';
 import { FundingMini } from '@/components/event-parts';
 import { Segmented, SkeletonList } from '@/components/kit';
 import { Mascot } from '@/components/mascot';
-import { PrivateImage } from '@/components/private-image';
+import { EventCover } from '@/components/event-cover';
 import { ErrorState } from '@/components/states';
 import { Button, Chip, Row, T } from '@/components/ui';
 import { formatEventDate, timeUntil } from '@/lib/format';
@@ -215,30 +215,33 @@ function EventCard({ item, funding, memory }: { item: MyEvent; funding?: EventFu
       accessibilityRole="button"
       accessibilityLabel={`${e.title}, ${ROLE_LABELS[item.role]}${funding && preparer ? `, ${funding.percent} % de l’objectif` : ''}`}
       onPress={() => router.push({ pathname: '/event/[id]', params: { id: e.id } })}
-      style={({ pressed }) => [{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', transform: [{ scale: pressed ? 0.985 : 1 }] }, shadow.card]}
+      style={({ pressed }) => ({ backgroundColor: colors.surface, borderRadius: radius.cover, overflow: 'hidden', transform: [{ scale: pressed ? 0.985 : 1 }] })}
     >
-      {e.cover_path ? <PrivateImage path={e.cover_path} style={{ width: '100%', height: 120 }} label={`Couverture de ${e.title}`} /> : <View style={{ height: 8, backgroundColor: memory ? colors.violet : colors.coral }} />}
-      <View style={{ padding: space.lg, gap: space.md }}>
-        <Row style={{ alignItems: 'flex-start' }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <T v="h3" numberOfLines={2}>
-              {e.title}
-            </T>
-            <Row gap={6}>
-              <CalendarDays size={15} color={soon ? colors.coralInk : colors.inkSoft} strokeWidth={2} />
-              <T v="small" color={soon ? colors.coralInk : colors.inkSoft} style={{ fontFamily: soon ? fonts.bold : fonts.semiBold }}>
-                {memory ? `Ouverte le ${formatEventDate(e.reveal_at, e.timezone, false)}` : `${formatEventDate(e.gift_at, e.timezone, false)} · ${timeUntil(e.gift_at, now)}`}
-              </T>
-            </Row>
+      <View>
+        <EventCover event={e} style={{ width: '100%', aspectRatio: memory ? 3 : 2.2 }} />
+        {/* Échéance en étiquette, posée sur la couverture */}
+        <View style={{ position: 'absolute', left: space.md, bottom: space.md, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: soon ? colors.coral : colors.white, borderRadius: radius.tag, paddingHorizontal: 10, paddingVertical: 5 }}>
+          <CalendarDays size={14} color={soon ? colors.white : colors.ink} strokeWidth={2.25} />
+          <T v="label" color={soon ? colors.white : colors.ink} maxFontSizeMultiplier={1.3}>
+            {memory ? `Ouverte le ${formatEventDate(e.reveal_at, e.timezone, false)}` : `${formatEventDate(e.gift_at, e.timezone, false)} · ${timeUntil(e.gift_at, now)}`}
+          </T>
+        </View>
+        {item.role === 'beneficiary' ? (
+          <View style={{ position: 'absolute', right: space.md, top: space.md, width: 36, height: 36, borderRadius: 18, backgroundColor: colors.sunSoft, alignItems: 'center', justifyContent: 'center' }}>
+            <Gift size={18} color={colors.sunInk} />
           </View>
-          {item.role === 'beneficiary' ? (
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sunSoft, alignItems: 'center', justifyContent: 'center' }}>
-              <Gift size={20} color={colors.sunInk} />
-            </View>
-          ) : (
-            <Chip label={ROLE_LABELS[item.role]} tone={item.role === 'organizer' ? 'coral' : 'lavender'} />
-          )}
-        </Row>
+        ) : item.role === 'organizer' ? (
+          <View style={{ position: 'absolute', right: space.md, top: space.md, backgroundColor: colors.ink, borderRadius: radius.tag, paddingHorizontal: 8, paddingVertical: 4 }}>
+            <T v="small" color={colors.white} style={{ fontFamily: fonts.bold }} maxFontSizeMultiplier={1.2}>
+              Tu organises
+            </T>
+          </View>
+        ) : null}
+      </View>
+      <View style={{ paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.lg, gap: space.md }}>
+        <T v="h2" numberOfLines={2}>
+          {e.title}
+        </T>
         {preparer && funding && !memory ? <FundingMini collected={funding.collected_cents} target={funding.target_cents} percent={funding.percent} goalReached={funding.goal_reached} /> : null}
         {e.is_demo ? <Chip label="Démo" tone="sun" /> : null}
       </View>

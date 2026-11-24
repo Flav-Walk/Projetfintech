@@ -4,7 +4,12 @@ import { Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { Switch, View } from 'react-native';
 import { BackHeader } from '@/components/back-header';
+import { CoverPicker, type CoverChoice } from '@/components/cover-picker';
 import { DateField } from '@/components/date-field';
+import { useAuth } from '@/lib/auth';
+import { artForOccasion, COVER_ARTS, type CoverArt } from '@/lib/covers';
+import { uploadImage } from '@/lib/media';
+import { supabase } from '@/lib/supabase';
 import { ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Field, Row, Screen, T } from '@/components/ui';
 import { formatEventDate } from '@/lib/format';
@@ -54,6 +59,12 @@ function SettingsForm({ e, targetCents }: { e: EventRow; targetCents: number }) 
   }));
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const { session } = useAuth();
+  const initialCover: CoverChoice = e.cover_path
+    ? { kind: 'current', path: e.cover_path, art: artForOccasion(e.occasion) }
+    : { kind: 'art', art: (COVER_ARTS as readonly string[]).includes(e.cover_art ?? '') ? (e.cover_art as CoverArt) : artForOccasion(e.occasion) };
+  const [cover, setCover] = useState<CoverChoice>(initialCover);
+  const [uploading, setUploading] = useState(false);
 
   const locked = {
     votes: new Date(e.votes_close_at).getTime() <= now,
@@ -81,21 +92,44 @@ function SettingsForm({ e, targetCents }: { e: EventRow; targetCents: number }) 
     if (!locked.votes) patch.votes_close_at = dates.votes.toISOString();
     if (!locked.contrib) patch.contributions_close_at = dates.contrib.toISOString();
     if (!locked.reveal) patch.reveal_at = dates.reveal.toISOString();
+    const previousPhoto = e.cover_path;
     try {
+      // Couverture : nouvelle photo (chemin imposé par la base), illustration, ou inchangée.
+      if (cover.kind === 'photo' && session) {
+        setUploading(true);
+        patch.cover_path = await uploadImage('event-media', `${session.user.id}/covers`, cover.picked);
+        patch.cover_art = null;
+      } else if (cover.kind === 'art') {
+        patch.cover_path = null;
+        patch.cover_art = cover.art;
+      }
       await update.mutateAsync(patch);
       if (cents !== targetCents) await setEventTarget.mutateAsync(cents);
+      // Ancienne photo remplacée : supprimée si elle est dans mon dossier (les autres restent à leur auteur).
+      if (previousPhoto && patch.cover_path !== undefined && patch.cover_path !== previousPhoto && session && previousPhoto.startsWith(`${session.user.id}/`)) {
+        void supabase.storage.from('event-media').remove([previousPhoto]);
+      }
+      if (patch.cover_path) setCover({ kind: 'current', path: patch.cover_path, art: artForOccasion(e.occasion) });
       setSaved(true);
     } catch (err) {
-      setError(messageFor(err));
+      setError(err instanceof Error && /image|Format|lourde/i.test(err.message) ? err.message : messageFor(err));
+    } finally {
+      setUploading(false);
     }
   }
 
   return (
-    <Screen footer={!frozen ? <Button label="Enregistrer" onPress={save} loading={update.isPending || setEventTarget.isPending} /> : undefined}>
+    <Screen footer={!frozen ? <Button label="Enregistrer" onPress={save} loading={update.isPending || setEventTarget.isPending || uploading} /> : undefined}>
       <BackHeader title="Réglages" subtitle={e.title} fallback={`/event/${e.id}`} />
       {frozen ? <Banner tone="info">Événement terminé : les réglages sont figés.</Banner> : null}
       {saved ? <Banner tone="info">Réglages enregistrés.</Banner> : null}
       {error ? <Banner tone="error">{error}</Banner> : null}
+      {!frozen ? (
+        <View style={{ gap: 6 }}>
+          <T v="label">Couverture</T>
+          <CoverPicker value={cover} onChange={setCover} occasion={e.occasion} onError={setError} />
+        </View>
+      ) : null}
       <Field label="Titre" value={title} onChangeText={setTitle} maxLength={80} editable={!frozen} />
       <Field label="Personne fêtée" value={beneficiary} onChangeText={setBeneficiary} maxLength={60} editable={!frozen} />
       <Field label="Description" value={description} onChangeText={setDescription} multiline maxLength={600} editable={!frozen} />
