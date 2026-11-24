@@ -299,10 +299,6 @@ export function Row({ children, style, gap = space.md }: { children: ReactNode; 
   return <View style={[{ flexDirection: 'row', alignItems: 'center', gap }, style]}>{children}</View>;
 }
 
-export function Spacer({ size = space.lg }: { size?: number }) {
-  return <View style={{ height: size }} />;
-}
-
 export function ProgressBar({ value, track = colors.coralSoft, fill = colors.coral, height = 10, label }: { value: number; track?: string; fill?: string; height?: number; label: string }) {
   const pct = Math.max(0, Math.min(100, value));
   return (

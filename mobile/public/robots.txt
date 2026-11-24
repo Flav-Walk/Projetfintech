@@ -1,0 +1,5 @@
+# Application privee (cagnottes, capsules, profils) : rien a indexer.
+# Indication pour les robots, pas un controle d'acces : les donnees sont protegees par la base.
+User-agent: *
+Disallow: /
+

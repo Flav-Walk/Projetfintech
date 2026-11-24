@@ -37,7 +37,7 @@ const NEXT: Record<NextAction, Next> = {
   // Formulation neutre : participer reste libre, sans montant suggéré ni rappel insistant.
   contribute: { title: 'La cagnotte est ouverte', text: 'Participe si tu le souhaites, du montant de ton choix.', label: 'Participer', route: 'contribute', Icon: Coins, tone: 'money' },
   wait_reveal: { title: 'Tout est prêt de ton côté', text: 'Merci ! Rendez-vous le jour J.', label: 'Voir la capsule', route: 'capsule', Icon: Hourglass, tone: 'idea' },
-  open_capsule: { title: 'Ta capsule est ouverte', text: 'Des mots, des photos et un cadeau t’attendent.', label: 'Découvrir', route: 'capsule', Icon: PartyPopper, tone: 'capsule' },
+  open_capsule: { title: 'Ta capsule est ouverte', text: 'Des mots et des photos t’attendent.', label: 'Découvrir', route: 'capsule', Icon: PartyPopper, tone: 'capsule' },
   view_memories: { title: 'Revivre les souvenirs', text: 'Les mots, les photos et le cadeau.', label: 'Ouvrir la capsule', route: 'capsule', Icon: PartyPopper, tone: 'capsule' },
 };
 /** Organisation = encre (aubergine), argent = corail, idée = soleil, capsule = nuit. */

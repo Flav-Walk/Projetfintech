@@ -96,9 +96,6 @@ export const shadow = {
   none: {},
 } as const;
 
-/** Durées de mouvement (ms). « Réduire les animations » : fondu court ou rien. */
-export const motion = { fast: 150, base: 220, slow: 320, celebrate: 600 } as const;
-
 /** Teintes d'avatar sans photo (pastels de la palette). */
 export const avatarTints = ['#FFD6C8', '#F3E2C7', '#FFF0C9', '#D6F1E4', '#FFDDEA', '#EADBD3'] as const;
 

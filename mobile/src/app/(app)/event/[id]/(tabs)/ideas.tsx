@@ -9,13 +9,12 @@ import { ProposalCard } from '@/components/idea-parts';
 import { ChoiceChip } from '@/components/kit';
 import { hapticSuccess } from '@/lib/haptics';
 import { useToast } from '@/lib/toast';
-import { PrivateImage } from '@/components/private-image';
 import { EmptyState, ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Row, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { formatEventDate, timeUntil } from '@/lib/format';
 import { useCastVote, useIdeasRealtime, useMyVote, useProposals, useRanking, useReactions, useToggleReaction } from '@/lib/ideas';
-import { useEvent, useProgress, useRevealedGift } from '@/lib/queries';
+import { useEvent, useProgress } from '@/lib/queries';
 import type { ProposalRow } from '@/lib/types';
 import { useEventId } from '@/lib/use-event-context';
 import { useNow } from '@/lib/use-now';
@@ -39,18 +38,16 @@ export default function Ideas() {
   useIdeasRealtime(id);
   const event = useEvent(id);
   const progress = useProgress(id);
-  const isBeneficiary = progress.data?.my_role === 'beneficiary';
   const proposals = useProposals(id);
-  const ranking = useRanking(id, !isBeneficiary && !!progress.data);
-  const myVote = useMyVote(id, !isBeneficiary && !!progress.data);
+  // La personne fêtée n'arrive jamais ici (redirigée vers sa capsule par event/[id]/_layout).
+  const ranking = useRanking(id, !!progress.data);
+  const myVote = useMyVote(id, !!progress.data);
   const visible = useMemo(() => (proposals.data ?? []).filter((p) => p.status !== 'withdrawn'), [proposals.data]);
   const reactions = useReactions(id, visible.map((p) => p.id));
   const vote = useCastVote(id);
   const react = useToggleReaction(id);
   const toast = useToast();
   const [viewMode, setViewMode] = useState<ViewMode | null>(null);
-  // Bénéficiaire : le cadeau retenu sans prix ni lien (les idées et leurs prix lui sont fermées).
-  const gift = useRevealedGift(id, isBeneficiary);
 
   if (event.isPending || progress.isPending || proposals.isPending) return <Loading />;
   if (event.isError || proposals.isError || !event.data || !progress.data) {
@@ -87,29 +84,6 @@ export default function Ideas() {
   const mine = visible.find((x) => x.id === myVote.data);
   const selected = visible.find((x) => x.id === e.selected_proposal_id);
   const open = (pid: string) => router.push(`/event/${id}/idea/${pid}` as never);
-
-  if (isBeneficiary) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-        <ScrollView contentContainerStyle={{ padding: gutter, gap: space.lg }}>
-          <EventTabHeader event={e} title="Ton cadeau" />
-          {gift.isPending ? (
-            <Loading />
-          ) : gift.data ? (
-            <Card tone="sun" style={{ gap: space.sm }}>
-              {gift.data.image_path ? (
-                <PrivateImage path={gift.data.image_path} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16 }} label={`Photo du cadeau : ${gift.data.title}`} />
-              ) : null}
-              <T v="h2">{gift.data.title}</T>
-              {gift.data.description ? <T color={colors.inkSoft}>{gift.data.description}</T> : null}
-            </Card>
-          ) : (
-            <EmptyState title="Surprise !" text="Ton groupe garde le secret sur le cadeau." />
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>

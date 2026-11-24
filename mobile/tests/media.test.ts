@@ -34,3 +34,31 @@ test('couverture : photo, sinon illustration choisie, sinon illustration selon l
   assert.deepEqual(coverFor({ cover_path: null, cover_art: 'inconnu', occasion: 'Anniversaire' }), { kind: 'art', art: 'anniversaire' });
   assert.equal(COVER_ARTS.length, 6);
 });
+
+test('métadonnées : GPS, appareil et commentaires retirés (JPEG, PNG), image intacte', async () => {
+  const { stripImageMetadata, sniffImageType } = await import('../src/lib/image-bytes');
+  const seg = (marker: number, payload: string) => { const p = Buffer.from(payload, 'latin1'); return Buffer.concat([Buffer.from([0xff, marker, (p.length + 2) >> 8, (p.length + 2) & 0xff]), p]); };
+  const jpeg = Buffer.concat([
+    Buffer.from([0xff, 0xd8]),
+    seg(0xe0, 'JFIF\0\x01\x01'),
+    seg(0xe1, 'Exif\0\0GPSLatitude=48.85;Make=TéléphoneX'),
+    seg(0xe2, 'ICC_PROFILE\0profil'),
+    seg(0xfe, 'commentaire privé'),
+    seg(0xed, 'Photoshop 3.0 IPTC auteur'),
+    Buffer.from([0xff, 0xda, 0x00, 0x04, 0x01, 0x02]), Buffer.alloc(600, 0x55), Buffer.from([0xff, 0xd9]),
+  ]);
+  const out = Buffer.from(stripImageMetadata(new Uint8Array(jpeg)));
+  const s = out.toString('latin1');
+  assert.equal(sniffImageType(out), 'image/jpeg');
+  for (const leak of ['GPSLatitude', 'Make=', 'commentaire', 'IPTC']) assert.ok(!s.includes(leak), leak);
+  assert.ok(s.includes('JFIF') && s.includes('ICC_PROFILE'), 'en-têtes utiles conservés');
+  assert.ok(out.subarray(out.length - 608).equals(jpeg.subarray(jpeg.length - 608)), 'données d’image inchangées');
+
+  const chunk = (name: string, data: string) => { const d = Buffer.from(data, 'latin1'); const len = Buffer.alloc(4); len.writeUInt32BE(d.length); return Buffer.concat([len, Buffer.from(name), d, Buffer.alloc(4)]); };
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', 'x'.repeat(13)), chunk('tEXt', 'GPS\0 48.85'), chunk('eXIf', 'MM\0*'), chunk('IDAT', 'y'.repeat(600)), chunk('IEND', '')]);
+  const p = Buffer.from(stripImageMetadata(new Uint8Array(png))).toString('latin1');
+  assert.ok(!p.includes('GPS') && !p.includes('eXIf') && p.includes('IDAT') && p.includes('IEND'));
+  // Structure inattendue : rendue telle quelle plutôt que corrompue.
+  const broken = Buffer.from([0xff, 0xd8, 0xff, 0xe1, 0xff, 0xff, 0x01]);
+  assert.ok(Buffer.from(stripImageMetadata(new Uint8Array(broken))).equals(broken));
+});

@@ -111,6 +111,45 @@ beforeEach(() => {
 const app = () => buildApp({ config, gateway, payments: new SimulatedPaymentProvider(), mailer });
 const auth = { authorization: 'Bearer valid-jwt' };
 
+test('limite de débit : une adresse forgée dans X-Forwarded-For ne la contourne pas (relais Render)', async () => {
+  const a = await app();
+  const codes: number[] = [];
+  for (let i = 0; i < 8; i++) {
+    // Le client écrit ce qu'il veut à gauche ; le relais de confiance ajoute la vraie adresse à droite.
+    const res = await a.inject({ method: 'POST', url: '/internal/outbox/drain', remoteAddress: '10.0.0.1', headers: { 'x-forwarded-for': `203.0.113.${i}, 198.51.100.7` } });
+    codes.push(res.statusCode);
+  }
+  assert.deepEqual(codes.slice(0, 6), [200, 200, 200, 200, 200, 200]);
+  assert.equal(codes[6], 429, `contournement : ${codes.join(' ')}`);
+  assert.throws(() => loadConfig({ NODE_ENV: 'test', SUPABASE_URL: 'https://e.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test_key_000000', TRUST_PROXY_HOPS: '-1' }));
+});
+
+test('pages publiques : indexables, canonique et partage ; liens privés jamais indexés ni bavards', async () => {
+  const a = await app();
+  const home = await a.inject({ method: 'GET', url: '/' });
+  assert.equal(home.statusCode, 200);
+  assert.match(home.body, /<link rel="canonical" href="https:\/\/complice-api\.onrender\.com\/"\/>/);
+  assert.match(home.body, /og:image" content="https:\/\/complice-api\.onrender\.com\/og-image\.png"/);
+  assert.match(home.body, /name="robots" content="index,follow"/);
+  assert.equal((home.body.match(/<h1/g) ?? []).length, 1, 'un seul titre principal');
+  assert.match(String(home.headers['content-security-policy']), /frame-ancestors 'none'/);
+  assert.equal(home.headers['x-content-type-options'], 'nosniff');
+  const robots = await a.inject({ method: 'GET', url: '/robots.txt' });
+  for (const p of ['/i/', '/e/', '/v1/', '/internal/']) assert.ok(robots.body.includes(`Disallow: ${p}`), p);
+  const sitemap = (await a.inject({ method: 'GET', url: '/sitemap.xml' })).body;
+  assert.deepEqual([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]), ['https://complice-api.onrender.com/', 'https://complice-api.onrender.com/confidentialite']);
+  assert.equal((await a.inject({ method: 'GET', url: '/og-image.png' })).headers['content-type'], 'image/png');
+  // Lien d'invitation : la personne fêtée reçoit la même page, qui ne doit rien dévoiler de la surprise.
+  const inv = await a.inject({ method: 'GET', url: `/i/${'a'.repeat(64)}` });
+  assert.equal(inv.headers['x-robots-tag'], 'noindex, nofollow');
+  assert.equal(inv.headers['referrer-policy'], 'no-referrer');
+  assert.match(inv.body, /name="robots" content="noindex,nofollow"/);
+  assert.doesNotMatch(inv.body, /cadeau|surprise|cagnotte|og:/i);
+  const ev = await a.inject({ method: 'GET', url: '/e/00000000-0000-4000-8000-000000000000' });
+  assert.equal(ev.headers['x-robots-tag'], 'noindex, nofollow');
+  assert.doesNotMatch(ev.body, /og:/);
+});
+
 test('GET /health', async () => {
   const res = await (await app()).inject({ method: 'GET', url: '/health' });
   assert.equal(res.statusCode, 200);

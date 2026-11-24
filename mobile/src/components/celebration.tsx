@@ -1,6 +1,6 @@
 import { BADGE_LABELS, type BadgeKind } from '@complice/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Pressable, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,9 +12,6 @@ import { T } from './ui';
 
 type Toast = { id: number; kind: 'badge'; badge: BadgeKind } | { id: number; kind: 'text'; title: string; text?: string };
 type NewToast = { kind: 'badge'; badge: BadgeKind } | { kind: 'text'; title: string; text?: string };
-type Ctx = { celebrate: (t: NewToast) => void };
-const CelebrationContext = createContext<Ctx>({ celebrate: () => undefined });
-export const useCelebrate = () => useContext(CelebrationContext).celebrate;
 
 /**
  * Retour visuel d'accomplissement. Les timbres gagnés arrivent par Realtime (activité « badge_awarded »
@@ -62,8 +59,7 @@ export function CelebrationHost({ eventId, children }: { eventId: string; childr
   }, [eventId, session?.user.id, celebrate, qc]);
 
   return (
-    <CelebrationContext.Provider value={{ celebrate }}>
-      <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
         {children}
         {toast ? (
           <Animated.View
@@ -91,7 +87,6 @@ export function CelebrationHost({ eventId, children }: { eventId: string; childr
             </Pressable>
           </Animated.View>
         ) : null}
-      </View>
-    </CelebrationContext.Provider>
+    </View>
   );
 }

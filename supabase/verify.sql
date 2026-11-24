@@ -2,7 +2,7 @@
 -- Chaque ligne doit afficher ok = true.
 select 'migrations enregistrées' as controle,
        (select count(*) from supabase_migrations.schema_migrations where version like '2026%')::text as valeur,
-       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 13 as ok
+       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 14 as ok
 union all
 select 'tables COMPLICE présentes',
        count(*)::text,
@@ -114,6 +114,17 @@ select 'personne fêtée : capsule seule, invitation nominative (migration 13)',
          and not has_function_privilege('authenticated', 'public.create_invitation_internal(uuid, public.member_role, integer, integer)', 'execute')
          and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'event_members' and column_name = 'capsule_opened_at'), false)
 union all
+select 'audit : export, purge, ouverture jamais dans le passé (migration 14)',
+       case when to_regprocedure('public.export_my_data()') is not null
+             and has_function_privilege('authenticated', 'public.export_my_data()', 'execute')
+             and not has_function_privilege('anon', 'public.export_my_data()', 'execute')
+             and not has_function_privilege('authenticated', 'public.purge_stale_data()', 'execute')
+            then 'conformes' else 'ANOMALIE : appliquer 20261124001400_audit_privacy' end,
+       coalesce(to_regprocedure('public.export_my_data()') is not null
+         and has_function_privilege('authenticated', 'public.export_my_data()', 'execute')
+         and not has_function_privilege('anon', 'public.export_my_data()', 'execute')
+         and not has_function_privilege('authenticated', 'public.purge_stale_data()', 'execute'), false)
+union all
 select 'aperçu d''invitation ouvert aux visiteurs',
        case when has_function_privilege('anon', 'public.preview_invitation(text)', 'execute') then 'ouvert' else 'fermé' end,
        has_function_privilege('anon', 'public.preview_invitation(text)', 'execute');
@@ -122,3 +133,5 @@ select 'aperçu d''invitation ouvert aux visiteurs',
 -- activer l'extension pg_cron (Database > Extensions) puis exécuter :
 --   select cron.schedule('complice-reminders', '*/10 * * * *', 'select public.run_due_reminders()');
 select jobname, schedule, command, active from cron.job where jobname = 'complice-reminders';
+-- Purge planifiée (migration 14) : une ligne attendue.
+select jobname, schedule, command, active from cron.job where jobname = 'complice-purge';

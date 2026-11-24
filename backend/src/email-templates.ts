@@ -54,7 +54,7 @@ export function renderEmail(row: OutboxRow, publicUrl: string): OutgoingEmail {
     const url = `${base}/i/${token}`;
     // Bénéficiaire : ni titre ni détail des préparatifs, la surprise reste entière.
     const intro = isBeneficiary
-      ? `${esc(inviter)} et tes proches te préparent une surprise sur COMPLICE. Tu découvriras leurs mots et leur cadeau le jour de l’ouverture : rien ne t’est montré avant.`
+      ? `${esc(inviter)} et tes proches te préparent une surprise sur COMPLICE. Tu découvriras leurs mots et leurs photos le jour de l’ouverture : rien ne t’est montré avant.`
       : `${esc(inviter)} t’invite à préparer ensemble « ${esc(title)} »${beneficiary ? ` pour ${esc(beneficiary)}` : ''} : idées de cadeau, votes, cagnotte et capsule de mots.`;
     const how = 'Dans l’app COMPLICE, connecte-toi ou crée ton compte avec cette adresse e-mail et confirme-la avec le code reçu : l’invitation t’attendra, tu choisiras de rejoindre ou non.';
     const plain = (s: string) => s.replace(/&[a-z#0-9]+;/g, (m) => ({ '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" })[m] ?? m);
@@ -80,7 +80,7 @@ export function renderEmail(row: OutboxRow, publicUrl: string): OutgoingEmail {
   const mine = p.is_beneficiary === true;
   const url = `${base}/e/${row.event_id}`;
   const line = mine
-    ? `Tes proches t’ont préparé des mots, des photos et un cadeau. La capsule « ${esc(title)} » est ouverte : c’est le moment de la découvrir.`
+    ? `Tes proches t’ont préparé des mots et des photos. La capsule « ${esc(title)} » est ouverte : c’est le moment de la découvrir.`
     : `La capsule « ${esc(title)} » est ouverte : ${esc(beneficiary)} peut découvrir vos mots et vos photos. Les souvenirs restent accessibles à tout le groupe.`;
   return {
     to: row.to_email,

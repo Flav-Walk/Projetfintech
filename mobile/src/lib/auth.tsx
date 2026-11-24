@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
-import * as Linking from 'expo-linking';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { clearLocalUserData } from './local-drafts';
 import { supabase } from './supabase';
@@ -87,15 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   return useContext(AuthContext);
-}
-
-/**
- * URL de retour des e-mails Auth (fonctionne en Expo Go : exp://…, et en build : complice://…).
- * Le jeton d'une invitation en cours y est ajouté : après confirmation, l'utilisateur rejoint le bon
- * groupe même si le stockage local a été vidé entre-temps.
- */
-export function authRedirectUrl(invite?: string | null) {
-  return Linking.createURL('/auth/callback', invite ? { queryParams: { invite } } : undefined);
 }
 
 /** Déconnexion : session, brouillons locaux et invitation en attente. */

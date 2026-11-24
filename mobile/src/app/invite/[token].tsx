@@ -127,7 +127,7 @@ export default function InviteScreen() {
             </Row>
           </Row>
           {p.role === 'beneficiary' ? (
-            <Banner tone="info">Tu es la personne fêtée : tu découvriras les messages et le cadeau à l’ouverture de la capsule. Rien ne te sera montré avant.</Banner>
+            <Banner tone="info">Tu es la personne fêtée : tu découvriras les mots et les photos de tes proches à l’ouverture de la capsule. Rien ne te sera montré avant.</Banner>
           ) : null}
         </Card>
       ) : p.status === 'wrong_account' ? (

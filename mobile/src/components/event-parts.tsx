@@ -6,16 +6,12 @@ import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, w
 import { formatEventDate, timeUntil } from '@/lib/format';
 import { useNow } from '@/lib/use-now';
 import { colors, fonts, radius, space } from '@/theme/tokens';
-import { AvatarPile, UserAvatar } from './avatar';
+import { UserAvatar } from './avatar';
 import { Row, T } from './ui';
 
 /** Compatibilité : avatar par initiales (préférer UserAvatar avec la photo). */
 export function Avatar({ name, size = 36, index = 0, path }: { name: string; size?: number; index?: number; path?: string | null }) {
   return <UserAvatar name={name} size={size} path={path} seed={`${name}-${index}`} />;
-}
-
-export function AvatarStack({ names, max = 6 }: { names: string[]; max?: number }) {
-  return <AvatarPile people={names.map((name) => ({ name }))} max={max} />;
 }
 
 /** Jauge animée (remplissage doux, désactivé si « Réduire les animations »). */

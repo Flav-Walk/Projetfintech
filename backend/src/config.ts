@@ -21,6 +21,12 @@ const schema = z.object({
    * Jamais de « * » : chaque origine doit être une URL http(s) complète sans chemin.
    */
   ALLOWED_ORIGINS: z.string().default(DEV_ORIGINS.join(',')),
+  /**
+   * Nombre de relais (proxys) de confiance devant l'API. Render : 1. L'adresse cliente retenue pour les
+   * limites de débit est celle ajoutée par le dernier relais de confiance, jamais la valeur la plus à gauche
+   * de X-Forwarded-For (fournie par le client, donc falsifiable). 0 : aucune confiance (adresse du socket).
+   */
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
   PAYMENT_PROVIDER: z.enum(['simulated']).default('simulated'),
   /** URL publique de cette API (liens des e-mails : /i/<jeton>, /e/<événement>). */
   APP_PUBLIC_URL: z.url().default('https://complice-api.onrender.com'),

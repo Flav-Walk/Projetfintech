@@ -168,11 +168,6 @@ export function SectionHeader({ title, action, count }: { title: string; action?
   );
 }
 
-// ------------------------------------------------------------------ Pastille d'icône
-export function IconCircle({ children, bg = colors.sand, size = 44 }: { children: ReactNode; bg?: string; size?: number }) {
-  return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>{children}</View>;
-}
-
 // ------------------------------------------------------------------ Case à cocher ronde (sélection multiple)
 export function CheckDot({ checked }: { checked: boolean }) {
   return (

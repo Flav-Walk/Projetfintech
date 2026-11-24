@@ -1,8 +1,8 @@
 import { messageFor } from '@complice/shared';
 import { router } from 'expo-router';
-import { AtSign, Ban, Camera, Check, LogOut, ShieldCheck, Trash2, User } from 'lucide-react-native';
+import { AtSign, Ban, Camera, Check, Download, LogOut, ShieldCheck, Trash2, User } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserAvatar } from '@/components/avatar';
 import { ConfirmButton } from '@/components/confirm-button';
@@ -28,7 +28,7 @@ const PREFS: { key: keyof Omit<NotificationPrefs, 'user_id'>; label: string; hin
   { key: 'tasks', label: 'Missions', hint: 'Quand une mission t’est confiée.' },
   { key: 'capsule', label: 'Capsule', hint: 'Ouverture de la capsule, remerciements.' },
   { key: 'messages', label: 'Discussion', hint: 'Nouveaux messages (désactivé par défaut).' },
-  { key: 'emails', label: 'Aussi par e-mail', hint: 'L’ouverture de la capsule t’est aussi annoncée par e-mail. Jamais de publicité.' },
+  { key: 'emails', label: 'Aussi par e-mail', hint: 'L’ouverture de la capsule t’est aussi annoncée par e-mail. Facultatif, jamais de publicité. Les codes de connexion sont toujours envoyés.' },
 ];
 
 export default function ProfileScreen() {
@@ -83,18 +83,9 @@ export default function ProfileScreen() {
         <Group>
           <ListRow title="Personnes bloquées" subtitle="Elles ne peuvent ni te trouver, ni t’ajouter, ni t’inviter." left={<Ban size={22} color={colors.ink} />} onPress={() => setBlockedOpen(true)} chevron />
           <Divider />
-          <View style={{ paddingVertical: space.md, gap: space.sm }}>
-            <Row gap={space.sm}>
-              <ShieldCheck size={22} color={colors.ink} strokeWidth={1.75} />
-              <T v="bodyBold">Ce que COMPLICE conserve</T>
-            </Row>
-            <T v="small" color={colors.inkSoft}>
-              Ton e-mail (jamais montré aux autres), ton prénom, ton pseudo et ta photo ; tes amis ; les cagnottes que tu rejoins ; tes idées, votes, messages, mots et photos ; tes participations (simulées, aucun paiement réel). Le groupe voit le total de la cagnotte, jamais ton montant. Ton vote est privé sauf si l’organisateur rend les votes visibles.
-            </T>
-            <T v="small" color={colors.inkSoft}>
-              Si tu supprimes ton compte : profil, photo, amis, mots de capsule et photos sont supprimés ; tes messages restent sans nom ; tes participations restent dans le total, sans ton nom. Si tu organises une cagnotte, l’organisation passe au coorganisateur le plus ancien, sinon au participant le plus ancien.
-            </T>
-          </View>
+          <ListRow title="Tes données" subtitle="Ce qui est conservé, qui le voit, tes droits." left={<ShieldCheck size={22} color={colors.ink} strokeWidth={1.75} />} onPress={() => router.push('/privacy')} chevron />
+          <Divider />
+          <ExportData />
         </Group>
 
         <Group>
@@ -298,6 +289,45 @@ function BlockedSheet({ visible, onClose }: { visible: boolean; onClose: () => v
   );
 }
 
+/** Export des données du compte (RPC export_my_data) : uniquement mes données, jamais celles des autres. */
+function ExportData() {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  async function run() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc('export_my_data');
+      if (error) throw error;
+      const json = JSON.stringify(data, null, 2);
+      const name = `complice-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+      if (Platform.OS === 'web') {
+        const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        await Share.share({ title: name, message: json });
+      }
+      hapticSuccess();
+    } catch (e) {
+      toast.show({ text: messageFor(e), tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <ListRow
+      title={busy ? 'Préparation…' : 'Exporter mes données'}
+      subtitle="Un fichier avec ton profil, tes contenus et tes participations."
+      left={<Download size={22} color={colors.ink} />}
+      onPress={run}
+    />
+  );
+}
+
 function DeleteAccount() {
   const [msg, setMsg] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -326,7 +356,7 @@ function DeleteAccount() {
         Supprimer mon compte
       </T>
       <T v="small" color={colors.inkSoft}>
-        Action définitive et immédiate : profil, photo, amis, mots, photos et brouillons sont effacés ; tu perds l’accès à tes groupes. Tes participations restent comptées dans les cagnottes, sans ton nom.
+        Action définitive et immédiate : profil, photo, amis, mots, photos et brouillons sont effacés ; tu perds l’accès à tes groupes. Tes messages et tes idées restent visibles du groupe, sans ton nom ; tes participations restent comptées dans les cagnottes, sans ton nom.
         {!isApiConfigured ? ' Nécessite le serveur COMPLICE (non configuré dans cette version).' : ''}
       </T>
       {msg ? <Banner tone="error">{msg}</Banner> : null}

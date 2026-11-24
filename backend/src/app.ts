@@ -6,7 +6,9 @@ import { CONTRIBUTION_MAX_CENTS, CONTRIBUTION_MIN_CENTS } from '@complice/shared
 import type { Config } from './config.js';
 import { GatewayError, type DataGateway } from './gateway.js';
 import type { PaymentProvider } from './payments.js';
+import { readFileSync } from 'node:fs';
 import { eventLandingPage, invitationLandingPage } from './invite-page.js';
+import { FAVICON_SVG, homePage, privacyPage, robotsTxt, sitemapXml } from './public-pages.js';
 import type { Mailer } from './mailer.js';
 import { OutboxProcessor } from './outbox.js';
 
@@ -48,7 +50,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const { config, gateway, payments, mailer } = deps;
   const app = Fastify({
     logger: config.NODE_ENV === 'test' ? false : { level: 'info', redact: ['req.headers.authorization'] },
-    trustProxy: true, // Render place l'app derrière un proxy
+    // Render place l'app derrière un relais. « true » ferait confiance à toute la chaîne X-Forwarded-For :
+    // un client pourrait choisir son adresse et contourner les limites de débit (constaté le 2026-11-24).
+    // Les N premiers relais (depuis le socket) sont de confiance ; l'adresse retenue est celle ajoutée par le dernier.
+    trustProxy: (_address: string, hop: number) => hop < config.TRUST_PROXY_HOPS,
     bodyLimit: 16 * 1024,
   });
 
@@ -70,6 +75,18 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     maxAge: 600,
   });
   await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
+
+  // En-têtes de sécurité sur toutes les réponses ; politique de contenu stricte pour les pages HTML
+  // (aucune ressource externe, script en ligne limité à la redirection vers l'app, pas d'intégration en cadre).
+  app.addHook('onSend', async (_req, reply, payload) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    if (!reply.getHeader('Referrer-Policy')) reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    if (String(reply.getHeader('content-type') ?? '').startsWith('text/html')) {
+      reply.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+    }
+    return payload;
+  });
 
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof GatewayError) return reply.status(err.status).send({ error: err.code });
@@ -99,6 +116,23 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     time: new Date().toISOString(),
   }));
 
+  // ------------------------------------------------------------ pages publiques (présentation, confidentialité)
+  const base = config.APP_PUBLIC_URL.replace(/\/+$/, '');
+  let ogImage: Buffer | null = null;
+  try {
+    ogImage = readFileSync(new URL('../public/og-image.png', import.meta.url));
+  } catch {
+    ogImage = null;
+  }
+  const home = homePage(base);
+  const privacy = privacyPage(base);
+  app.get('/', async (_req, reply) => reply.header('Cache-Control', 'public, max-age=3600').type('text/html; charset=utf-8').send(home));
+  app.get('/confidentialite', async (_req, reply) => reply.header('Cache-Control', 'public, max-age=3600').type('text/html; charset=utf-8').send(privacy));
+  app.get('/robots.txt', async (_req, reply) => reply.type('text/plain; charset=utf-8').header('Cache-Control', 'public, max-age=3600').send(robotsTxt(base)));
+  app.get('/sitemap.xml', async (_req, reply) => reply.type('application/xml; charset=utf-8').header('Cache-Control', 'public, max-age=3600').send(sitemapXml(base)));
+  app.get('/favicon.svg', async (_req, reply) => reply.type('image/svg+xml').header('Cache-Control', 'public, max-age=86400').send(FAVICON_SVG));
+  app.get('/og-image.png', async (_req, reply) => (ogImage ? reply.type('image/png').header('Cache-Control', 'public, max-age=86400').send(ogImage) : reply.status(404).send()));
+
   // ------------------------------------------------------------ lien d'un e-mail vers un événement
   // Même principe que /i/<jeton> : aucune lecture en base, l'app vérifie les droits à l'ouverture.
   app.get<{ Params: { id: string } }>('/e/:id', async (req, reply) => {
@@ -107,7 +141,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       .status(ok ? 200 : 404)
       .header('Cache-Control', 'no-store')
       .header('Referrer-Policy', 'no-referrer')
-      .header('X-Robots-Tag', 'noindex')
+      .header('X-Robots-Tag', 'noindex, nofollow')
       .type('text/html')
       .send(eventLandingPage(ok ? req.params.id : null, config.APP_SCHEME));
   });
@@ -120,7 +154,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     return reply
       .header('Cache-Control', 'no-store')
       .header('Referrer-Policy', 'no-referrer')
-      .header('X-Robots-Tag', 'noindex')
+      .header('X-Robots-Tag', 'noindex, nofollow')
       .type('text/html')
       .send(invitationLandingPage(token, config.APP_SCHEME));
   });

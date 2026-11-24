@@ -239,7 +239,7 @@ export default function CreateEvent() {
           <DateField label="Remise du cadeau" value={giftAt} onChange={setGiftAt} minimumDate={new Date()} error={errors.gift} />
           <DateField label="Fin du vote" value={votesAt} onChange={setVotesAt} minimumDate={new Date()} error={errors.votes} hint="Après cette date, plus de vote ni de nouvelle idée." />
           <DateField label="Fin des participations" value={contribAt} onChange={setContribAt} minimumDate={new Date()} error={errors.contrib} />
-          <DateField label="Ouverture de la capsule" value={revealAt} onChange={setRevealAt} minimumDate={new Date()} error={errors.reveal} hint="La personne fêtée découvre les mots, les photos et le cadeau à cette date." />
+          <DateField label="Ouverture de la capsule" value={revealAt} onChange={setRevealAt} minimumDate={new Date()} error={errors.reveal} hint="La personne fêtée découvre les mots et les photos à cette date. Elle ne verra ni le cadeau choisi ni la cagnotte dans l’app." />
           <Row gap={space.sm}>
             <Button label="Tout caler sur la remise" variant="ghost" compact onPress={() => { setRevealAt(giftAt); setVotesAt(shift(giftAt, -5)); setContribAt(shift(giftAt, -2)); }} />
           </Row>
