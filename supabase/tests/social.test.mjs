@@ -272,6 +272,18 @@ test('prochaine action : proposer, voter, écrire, prendre une mission, puis la 
   assert.equal(prog.voted, true);
 });
 
+test('couverture illustrée (migration 12) : gestionnaire seulement, valeurs de la bibliothèque', async () => {
+  const ev = await createEvent(db, lea);
+  await join(db, sarah, (await invite(db, lea, ev)).token);
+  await as(db, lea, `update public.events set cover_art = 'mariage' where id = $1`, [ev]);
+  assert.equal((await as(db, sarah, `select cover_art from public.events where id = $1`, [ev])).rows[0].cover_art, 'mariage');
+  assert.match(await errorOf(as(db, lea, `update public.events set cover_art = 'https://ailleurs.example/x.png' where id = $1`, [ev])), /check constraint/);
+  const r = await as(db, sarah, `update public.events set cover_art = 'soiree' where id = $1 returning 1`, [ev]);
+  assert.equal(r.rowCount, 0, 'un participant ne modifie pas la couverture (RLS)');
+  // Photo : chemin imposé par la base (dossier de l'auteur), jamais une URL externe.
+  assert.match(await errorOf(as(db, lea, `update public.events set cover_path = 'https://ailleurs.example/x.png' where id = $1`, [ev])), /invalid_cover_path/);
+});
+
 test('suppression de compte : relations et invitations disparaissent, cagnottes intactes', async () => {
   const gone = await createUser(db, 'Partant');
   await friendReq(gone, lea);

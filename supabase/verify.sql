@@ -2,7 +2,7 @@
 -- Chaque ligne doit afficher ok = true.
 select 'migrations enregistrées' as controle,
        (select count(*) from supabase_migrations.schema_migrations where version like '2026%')::text as valeur,
-       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 11 as ok
+       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 12 as ok
 union all
 select 'tables COMPLICE présentes',
        count(*)::text,
@@ -95,6 +95,11 @@ select 'amis, invitations nominatives et total (migration 11)',
          and not has_table_privilege('authenticated', 'public.friendships', 'insert')
          and has_function_privilege('authenticated', 'public.search_profiles(text)', 'execute')
          and not has_function_privilege('anon', 'public.search_profiles(text)', 'execute')
+union all
+select 'couverture illustrée (migration 12)',
+       case when has_column_privilege('authenticated', 'public.events', 'cover_art', 'update') then 'conforme'
+            else 'ANOMALIE : appliquer 20261123001200_cover_art' end,
+       coalesce(has_column_privilege('authenticated', 'public.events', 'cover_art', 'update'), false)
 union all
 select 'aperçu d''invitation ouvert aux visiteurs',
        case when has_function_privilege('anon', 'public.preview_invitation(text)', 'execute') then 'ouvert' else 'fermé' end,

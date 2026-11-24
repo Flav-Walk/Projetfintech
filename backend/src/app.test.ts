@@ -118,6 +118,43 @@ test('GET /health', async () => {
   assert.equal(res.json().payment_provider, 'simulated');
 });
 
+test('CORS : preflight de l’app web locale, en-têtes aussi sur les erreurs, origine inconnue refusée', async () => {
+  const a = await app();
+  const origin = 'http://localhost:8081';
+  const pre = await a.inject({
+    method: 'OPTIONS',
+    url: '/v1/contributions?event_id=57413fba-a363-4e18-a914-49403ad003b4',
+    headers: { origin, 'access-control-request-method': 'GET', 'access-control-request-headers': 'authorization,content-type' },
+  });
+  assert.equal(pre.statusCode, 204);
+  assert.equal(pre.headers['access-control-allow-origin'], origin);
+  assert.match(String(pre.headers['access-control-allow-methods']), /GET/);
+  assert.match(String(pre.headers['access-control-allow-methods']), /POST/);
+  assert.match(String(pre.headers['access-control-allow-headers']).toLowerCase(), /authorization/);
+  assert.match(String(pre.headers['access-control-allow-headers']).toLowerCase(), /content-type/);
+  assert.equal(pre.headers['access-control-allow-credentials'], undefined, 'jamais de cookies');
+  // Erreur d'authentification : le navigateur doit pouvoir lire la réponse 401.
+  const unauth = await a.inject({ method: 'GET', url: '/v1/contributions', headers: { origin } });
+  assert.equal(unauth.statusCode, 401);
+  assert.equal(unauth.headers['access-control-allow-origin'], origin);
+  // Lecture authentifiée.
+  const ok = await a.inject({ method: 'GET', url: '/v1/contributions', headers: { origin, ...auth } });
+  assert.equal(ok.statusCode, 200);
+  assert.equal(ok.headers['access-control-allow-origin'], origin);
+  // Origine non listée : aucun en-tête d'autorisation.
+  const evil = await a.inject({ method: 'OPTIONS', url: '/v1/contributions', headers: { origin: 'https://evil.example', 'access-control-request-method': 'POST' } });
+  assert.equal(evil.headers['access-control-allow-origin'], undefined);
+});
+
+test('CORS : configuration explicite, « * » et chemins refusés, liste vide possible', () => {
+  const base = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test_key_000000' };
+  assert.deepEqual(loadConfig({ ...base, ALLOWED_ORIGINS: 'https://app.complice.fr/, http://localhost:8081' }).allowedOrigins, ['https://app.complice.fr', 'http://localhost:8081']);
+  assert.deepEqual(loadConfig({ ...base, ALLOWED_ORIGINS: '' }).allowedOrigins, []);
+  assert.ok(loadConfig(base).allowedOrigins.includes('http://localhost:8081'), 'origines de développement par défaut');
+  assert.throws(() => loadConfig({ ...base, ALLOWED_ORIGINS: '*' }), /ALLOWED_ORIGINS/);
+  assert.throws(() => loadConfig({ ...base, ALLOWED_ORIGINS: 'https://a.fr/chemin' }), /ALLOWED_ORIGINS/);
+});
+
 test('contributions : authentification obligatoire', async () => {
   const a = await app();
   assert.equal((await a.inject({ method: 'POST', url: '/v1/contributions', payload: {} })).statusCode, 401);

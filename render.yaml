@@ -31,6 +31,10 @@ services:
         sync: false
       - key: APP_SCHEME
         value: complice
+      # Origines web autorisées (CORS). L'app native n'en a pas besoin ; Expo web en local, oui.
+      # Ajouter ici l'URL d'une future version web publique (jamais « * »).
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006,http://localhost:8099
       - key: PAYMENT_PROVIDER
         value: simulated
       - key: APP_PUBLIC_URL

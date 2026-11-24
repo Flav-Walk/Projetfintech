@@ -60,7 +60,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     void outbox.drain().catch((err) => app.log.error({ err: err instanceof Error ? err.message : 'unknown' }, 'file d’e-mails'));
   };
 
-  await app.register(cors, { origin: config.allowedOrigins.length > 0 ? config.allowedOrigins : false });
+  // CORS avant toute route et tout contrôle d'authentification : le preflight OPTIONS reçoit sa réponse
+  // ici, et les réponses d'erreur (401, 4xx, 5xx) portent aussi les en-têtes pour une origine autorisée.
+  // Authentification par en-tête Bearer, jamais par cookie : pas de credentials CORS.
+  await app.register(cors, {
+    origin: config.allowedOrigins.length > 0 ? config.allowedOrigins : false,
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
+    maxAge: 600,
+  });
   await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
 
   app.setErrorHandler((err, _req, reply) => {
