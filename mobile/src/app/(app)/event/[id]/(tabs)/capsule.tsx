@@ -1,5 +1,5 @@
 import { messageFor, type CapsuleStatus } from '@complice/shared';
-import { BookOpen, CircleHelp, Gift, HeartHandshake, ImagePlus, LockKeyhole, Mail, X } from 'lucide-react-native';
+import { BookOpen, CircleHelp, Gift, ImagePlus, LockKeyhole, Mail, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -11,16 +11,17 @@ import { ConfirmButton } from '@/components/confirm-button';
 import { Mascot } from '@/components/mascot';
 import { PrivateImage } from '@/components/private-image';
 import { ErrorState, Loading } from '@/components/states';
+import { ThanksCard } from '@/components/thanks-card';
 import { Banner, Button, Card, Row, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { useCapsuleEntries, useCapsuleStats, useDeleteEntry, useMyEntry, useSaveEntry, useSaveThanks, useThanks } from '@/lib/capsule';
+import { useCapsuleEntries, useCapsuleStats, useDeleteEntry, useMyEntry, useSaveEntry, useThanks } from '@/lib/capsule';
 import { formatEventDate, timeUntil } from '@/lib/format';
 import { hapticSuccess } from '@/lib/haptics';
 import { draftKey, useLocalDraft } from '@/lib/local-drafts';
 import { pickImage, uploadImage, type PickedImage } from '@/lib/media';
 import { useEvent, useProfile, useProgress, useRevealedGift } from '@/lib/queries';
 import { supabase } from '@/lib/supabase';
-import type { CapsuleEntryRow, EventRow, ThanksRow } from '@/lib/types';
+import type { CapsuleEntryRow, EventRow } from '@/lib/types';
 import { useEventId } from '@/lib/use-event-context';
 import { useNow } from '@/lib/use-now';
 import { colors, fonts, gutter, radius, space, type } from '@/theme/tokens';
@@ -199,68 +200,6 @@ function CapsuleHelp({ visible, onClose, event }: { visible: boolean; onClose: (
         </View>
       ))}
     </Sheet>
-  );
-}
-
-/** Remerciements : le bénéficiaire écrit un message au groupe ; le groupe le lit dans le souvenir. */
-function ThanksCard({ eventId, beneficiaryName, canWrite, thanks, loading }: { eventId: string; beneficiaryName: string; canWrite: boolean; thanks: ThanksRow | null; loading: boolean }) {
-  const save = useSaveThanks(eventId);
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState('');
-  const [sent, setSent] = useState(false);
-  if (loading) return null;
-  if (!canWrite) {
-    if (!thanks) return null;
-    return (
-      <View style={{ backgroundColor: colors.sunSoft, borderRadius: radius.card, padding: space.lg, gap: space.sm }}>
-        <Row gap={space.sm}>
-          <HeartHandshake size={22} color={colors.coralDark} strokeWidth={1.75} />
-          <T v="label">Le mot de {beneficiaryName} pour le groupe</T>
-        </Row>
-        <T v="hand">{thanks.body}</T>
-      </View>
-    );
-  }
-  if (thanks && !editing) {
-    return (
-      <View style={{ backgroundColor: colors.sunSoft, borderRadius: radius.card, padding: space.lg, gap: space.sm }}>
-        <T v="label">Ton merci au groupe</T>
-        <T v="hand">{thanks.body}</T>
-        {sent ? <T v="small" color={colors.success}>Envoyé : tout le groupe peut le lire.</T> : null}
-        <Button compact variant="ghost" label="Modifier" onPress={() => (setText(thanks.body), setEditing(true), setSent(false))} />
-      </View>
-    );
-  }
-  return (
-    <View style={{ backgroundColor: colors.white, borderRadius: radius.card, padding: space.lg, gap: space.md }}>
-      <T v="h3">Un merci pour le groupe ?</T>
-      <T v="small" color={colors.inkSoft}>
-        Facultatif. Ton message apparaîtra dans ce souvenir pour toutes les personnes qui l’ont préparé.
-      </T>
-      <TextInput
-        value={text}
-        onChangeText={setText}
-        multiline
-        maxLength={1000}
-        placeholder="Merci à tous, c’est un super cadeau !"
-        placeholderTextColor={colors.inkFaint}
-        accessibilityLabel="Ton message de remerciement"
-        style={[type.body, { minHeight: 96, textAlignVertical: 'top', color: colors.ink, borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, padding: space.md }]}
-      />
-      {save.isError ? <Banner tone="error">{messageFor(save.error)}</Banner> : null}
-      <Button
-        variant="secondary"
-        label="Envoyer mon merci"
-        disabled={!text.trim()}
-        loading={save.isPending}
-        onPress={() =>
-          save.mutate(
-            { body: text.trim(), exists: !!thanks },
-            { onSuccess: () => (setEditing(false), setSent(true)) },
-          )
-        }
-      />
-    </View>
   );
 }
 

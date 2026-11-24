@@ -78,6 +78,18 @@ export async function invite(db, manager, eventId, role = 'participant', hours =
   return rows[0].inv;
 }
 
+/**
+ * Personne fêtée : invitation nominative par e-mail (adresse confirmée du compte), puis acceptation dans l'app.
+ * Depuis la migration 13, un lien générique ne peut plus attribuer ce rôle.
+ */
+export async function joinAsBeneficiary(db, manager, eventId, uid) {
+  const { rows: [u] } = await db.query(`select email from auth.users where id = $1`, [uid]);
+  const { rows: [p] } = await as(db, manager, `select public.prepare_email_invitation($1, 'beneficiary', $2) as r`, [eventId, u.email]);
+  if (p.r.status !== 'queued') return p.r;
+  const { rows: [i] } = await as(db, uid, `select id from public.my_event_invites() where event_id = $1`, [eventId]);
+  return (await as(db, uid, `select public.respond_event_invite($1, true) as r`, [i.id])).rows[0].r;
+}
+
 export async function join(db, uid, token) {
   const { rows } = await as(db, uid, `select public.accept_invitation($1) as r`, [token]);
   return rows[0].r;

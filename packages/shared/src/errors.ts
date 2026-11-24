@@ -37,6 +37,7 @@ export const ERROR_MESSAGES = {
   username_taken: 'Ce pseudo est déjà pris. Essaie une variante.',
   blocked_user: 'Tu as bloqué cette personne. Débloque-la d’abord depuis ton profil.',
   beneficiary_taken: 'Le bénéficiaire est déjà invité ou a déjà rejoint cette cagnotte.',
+  beneficiary_link_forbidden: 'La personne fêtée s’invite seulement par e-mail ou parmi tes amis, jamais par un lien partageable.',
   email_not_configured: 'L’envoi d’e-mails n’est pas encore activé : partage plutôt le lien.',
   invalid_request: 'Demande invalide.',
   network: 'Connexion impossible. Vérifie ton réseau et réessaie.',
@@ -77,6 +78,7 @@ export type InvitationStatus =
   | 'removed'
   | 'event_closed'
   | 'beneficiary_taken'
+  | 'role_conflict'
   | 'wrong_account';
 
 export const INVITATION_MESSAGES: Record<InvitationStatus, string> = {
@@ -90,5 +92,6 @@ export const INVITATION_MESSAGES: Record<InvitationStatus, string> = {
   removed: "L'organisateur t'a retiré de ce groupe.",
   event_closed: 'Cet événement est terminé.',
   beneficiary_taken: 'Le bénéficiaire a déjà rejoint cet événement.',
+  role_conflict: 'Tu fais déjà partie de ce groupe avec un autre rôle : cette invitation ne peut pas s’appliquer.',
   wrong_account: 'Cette invitation personnelle a été envoyée à une autre adresse e-mail. Connecte-toi avec le compte de cette adresse.',
 };

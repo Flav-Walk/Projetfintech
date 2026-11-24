@@ -92,11 +92,12 @@ export default function Chat() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      <View style={{ paddingHorizontal: gutter, paddingTop: space.sm, paddingBottom: space.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ paddingHorizontal: gutter, paddingTop: space.sm, paddingBottom: space.sm }}>
         {event.data ? (
           <EventTabHeader
             event={event.data}
             title="Discussion"
+            accent={colors.success}
             meta={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
                 <AvatarPile people={preparers.map((m) => ({ id: m.user_id, name: m.profiles?.display_name ?? '?', path: m.profiles?.avatar_path }))} max={4} size={24} />

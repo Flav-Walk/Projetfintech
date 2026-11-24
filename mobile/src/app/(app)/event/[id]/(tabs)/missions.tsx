@@ -80,6 +80,7 @@ export default function Missions() {
         <EventTabHeader
           event={e}
           title="Missions"
+          accent={colors.ink}
           meta={
             <View style={{ gap: space.sm }}>
               <HeaderMeta

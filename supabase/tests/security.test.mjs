@@ -1,7 +1,7 @@
 // Tests des règles d'accès et des règles métier sensibles, exécutés dans un vrai Postgres (PGlite).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { freshDb, createUser, as, errorOf, inDays, createEvent, invite, join } from './helpers.mjs';
+import { freshDb, createUser, as, errorOf, inDays, createEvent, invite, join, joinAsBeneficiary } from './helpers.mjs';
 
 let db;
 let lea, sarah, hugo, camille, intrus;
@@ -160,10 +160,9 @@ test('l’organisateur ne peut pas quitter sans transmettre', async () => {
 // ---------------------------------------------------------------- bénéficiaire
 test('bénéficiaire : ne voit rien avant le dévoilement, puis seulement la capsule publiée', async () => {
   const ev = await createEvent(db, lea, { title: 'Surprise pour Camille' });
-  const benInv = await invite(db, lea, ev, 'beneficiary', 24, 1);
   const partInv = await invite(db, lea, ev);
   await join(db, sarah, partInv.token);
-  assert.equal((await join(db, camille, benInv.token)).status, 'joined');
+  assert.equal((await joinAsBeneficiary(db, lea, ev, camille)).status, 'joined');
 
   await as(db, sarah, `insert into public.capsule_entries (event_id, body, status) values ($1, 'Joyeux anniversaire !', 'published')`, [ev]);
   await as(db, lea, `insert into public.capsule_entries (event_id, body) values ($1, 'brouillon')`, [ev]);
@@ -190,9 +189,10 @@ test('bénéficiaire : ne voit rien avant le dévoilement, puis seulement la cap
 
 test('un second bénéficiaire est refusé', async () => {
   const ev = await createEvent(db, lea);
-  const inv = await invite(db, lea, ev, 'beneficiary');
-  await join(db, camille, inv.token);
-  assert.equal((await join(db, intrus, inv.token)).status, 'beneficiary_taken');
+  await joinAsBeneficiary(db, lea, ev, camille);
+  // Plus de lien générique pour ce rôle ; une seconde invitation nominative est refusée.
+  assert.match(await errorOf(invite(db, lea, ev, 'beneficiary')), /beneficiary_link_forbidden/);
+  assert.match(await errorOf(joinAsBeneficiary(db, lea, ev, intrus)), /beneficiary_taken/);
 });
 
 // ---------------------------------------------------------------- propositions et votes

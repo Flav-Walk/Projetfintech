@@ -11,6 +11,7 @@ import { HeaderMeta, ScreenHeader } from '@/components/headers';
 import { Segmented, SkeletonList } from '@/components/kit';
 import { Mascot } from '@/components/mascot';
 import { EventCover } from '@/components/event-cover';
+import { CapsuleBadge } from '@/components/sealed-capsule';
 import { ErrorState } from '@/components/states';
 import { Button, Chip, Row, T } from '@/components/ui';
 import { formatEventDate, timeUntil } from '@/lib/format';
@@ -161,12 +162,12 @@ function InviteCard({ invite }: { invite: ReceivedInvite }) {
       const r = await respond.mutateAsync({ id: invite.id, accept });
       if (accept && (r.status === 'joined' || r.status === 'already_member')) {
         hapticSuccess();
-        if (surprise) toast.show({ text: 'C’est noté : rendez-vous le jour J !', tone: 'success' });
+        if (surprise && r.event_id) router.push({ pathname: '/surprise/[id]', params: { id: r.event_id } });
         else if (r.event_id) router.push({ pathname: '/event/[id]', params: { id: r.event_id, welcome: '1' } });
       } else if (!accept) {
         toast.show({ text: 'Invitation refusée', tone: 'info' });
       } else {
-        toast.show({ text: r.status === 'expired' ? 'Cette invitation a expiré.' : r.status === 'removed' ? 'Tu as été retiré·e de ce groupe.' : 'Cette invitation n’est plus valable.', tone: 'error' });
+        toast.show({ text: r.status === 'expired' ? 'Cette invitation a expiré.' : r.status === 'removed' ? 'Tu as été retiré·e de ce groupe.' : r.status === 'role_conflict' ? 'Tu fais déjà partie de ce groupe avec un autre rôle.' : 'Cette invitation n’est plus valable.', tone: 'error' });
       }
     } catch (e) {
       toast.show({ text: messageFor(e), tone: 'error' });
@@ -182,7 +183,7 @@ function InviteCard({ invite }: { invite: ReceivedInvite }) {
           </T>
           <T v="small" color={surprise ? colors.nightSub : colors.inkSoft}>
             {surprise
-              ? 'Tu ne verras rien avant le jour J : ni le cadeau, ni les mots, ni la cagnotte.'
+              ? 'Une capsule de mots et de photos t’attend. Tu la découvriras le jour J.'
               : `« ${invite.title} »${invite.gift_at ? ` · ${formatEventDate(invite.gift_at, undefined, false)}` : ''}${invite.member_count ? ` · ${invite.member_count} membre${invite.member_count > 1 ? 's' : ''}` : ''}`}
           </T>
           {invite.source === 'email' ? (
@@ -203,8 +204,13 @@ function InviteCard({ invite }: { invite: ReceivedInvite }) {
 function SurpriseCard({ surprise }: { surprise: SurpriseRow }) {
   const now = useNow();
   return (
-    <View style={{ backgroundColor: colors.night, borderRadius: radius.card, padding: space.xl, flexDirection: 'row', alignItems: 'center', gap: space.lg, overflow: 'hidden' }} accessible accessibilityLabel={`Une surprise se prépare pour toi. Ouverture ${formatEventDate(surprise.reveal_at)}.`}>
-      <Mascot size={72} mood="wink" />
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Une surprise se prépare pour toi. Ouverture ${formatEventDate(surprise.reveal_at)}. Voir ma capsule`}
+      onPress={() => router.push({ pathname: '/surprise/[id]', params: { id: surprise.event_id } })}
+      style={({ pressed }) => ({ backgroundColor: colors.night, borderRadius: radius.card, padding: space.xl, flexDirection: 'row', alignItems: 'center', gap: space.lg, overflow: 'hidden', transform: [{ scale: pressed ? 0.985 : 1 }] })}
+    >
+      <CapsuleBadge size={76} />
       <View style={{ flex: 1, gap: 4 }}>
         <T v="overline" color={colors.sun}>
           Chut… surprise
@@ -217,7 +223,7 @@ function SurpriseCard({ surprise }: { surprise: SurpriseRow }) {
           {surprise.organizer_name ? ` · avec ${surprise.organizer_name}` : ''}
         </T>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -230,7 +236,7 @@ function EventCard({ item, funding, memory }: { item: MyEvent; funding?: EventFu
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${e.title}, ${ROLE_LABELS[item.role]}${funding && preparer ? `, ${funding.percent} % de l’objectif` : ''}`}
-      onPress={() => router.push({ pathname: '/event/[id]', params: { id: e.id } })}
+      onPress={() => (preparer ? router.push({ pathname: '/event/[id]', params: { id: e.id } }) : router.push({ pathname: '/surprise/[id]', params: { id: e.id } }))}
       style={({ pressed }) => ({ backgroundColor: colors.surface, borderRadius: radius.cover, overflow: 'hidden', transform: [{ scale: pressed ? 0.985 : 1 }] })}
     >
       <View>

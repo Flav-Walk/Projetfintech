@@ -3,7 +3,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { colors, fonts } from '@/theme/tokens';
-import { HeaderAction } from './headers';
+import { HeaderAction, Perforation } from './headers';
 import { T } from './ui';
 
 /** Retour : même bouton rond que les autres actions d'en-tête (HeaderAction). */
@@ -31,6 +31,7 @@ export function BackHeader({ title, subtitle, right, fallback }: { title: string
           {subtitle}
         </T>
       ) : null}
+      <Perforation accent={colors.ink} />
     </View>
   );
 }

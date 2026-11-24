@@ -1,7 +1,7 @@
 // Parcours MVP complet et compléments de la migration 20261120000600 (rappels, missions, discussion).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { freshDb, createUser, as, errorOf, inDays, createEvent, invite, join } from './helpers.mjs';
+import { freshDb, createUser, as, errorOf, inDays, createEvent, invite, join, joinAsBeneficiary } from './helpers.mjs';
 
 let db;
 let lea, sarah, camille, intrus;
@@ -22,8 +22,7 @@ before(async () => {
   eventId = await createEvent(db, lea);
   const inv = await invite(db, lea, eventId);
   assert.equal((await join(db, sarah, inv.token)).status, 'joined');
-  const benef = await invite(db, lea, eventId, 'beneficiary');
-  assert.equal((await join(db, camille, benef.token)).status, 'joined');
+  assert.equal((await joinAsBeneficiary(db, lea, eventId, camille)).status, 'joined');
 });
 
 test('parcours : idée, vote, contribution, mission, message, capsule, puis dévoilement', async () => {
@@ -76,10 +75,10 @@ test('parcours : idée, vote, contribution, mission, message, capsule, puis dév
   assert.equal((await as(db, camille, `select public.can_read_media($1) as ok`, [`${eventId}/capsule/${sarah}/photo.jpg`])).rows[0].ok, true);
   // Le bénéficiaire voit le cadeau retenu sans prix ni lien, jamais la discussion ni les montants
   assert.equal((await as(db, camille, `select id from public.proposals where event_id = $1`, [eventId])).rows.length, 0);
-  const gift = (await as(db, camille, `select public.revealed_gift($1) as g`, [eventId])).rows[0].g;
-  assert.equal(gift.title, 'Platine vinyle');
-  assert.deepEqual(Object.keys(gift).sort(), ['description', 'id', 'image_path', 'title']);
-  assert.equal((await as(db, camille, `select public.can_read_media($1) as ok`, [img])).rows[0].ok, true, 'photo du cadeau retenu');
+  // Migration 13 : la personne fêtée ne voit plus le cadeau retenu ni sa photo (seulement la capsule).
+  assert.equal((await as(db, camille, `select public.revealed_gift($1) as g`, [eventId])).rows[0].g, null);
+  assert.equal((await as(db, sarah, `select public.revealed_gift($1) as g`, [eventId])).rows[0].g.title, 'Platine vinyle');
+  assert.equal((await as(db, camille, `select public.can_read_media($1) as ok`, [img])).rows[0].ok, false, 'photo du cadeau retenu fermée');
   const evCols = Object.keys((await as(db, camille, `select * from public.events where id = $1`, [eventId])).rows[0]);
   assert.ok(!evCols.some((c) => c.includes('cents')), 'aucun montant dans events');
   assert.equal((await as(db, camille, `select id from public.messages where event_id = $1`, [eventId])).rows.length, 0);

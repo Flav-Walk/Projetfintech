@@ -131,6 +131,7 @@ export default function Ideas() {
         <EventTabHeader
           event={e}
           title="Choisir le cadeau"
+          accent={colors.sun}
           meta={
             e.selected_proposal_id ? (
               <HeaderMeta dot={colors.success} text="Le cadeau est choisi. Merci pour vos idées !" />

@@ -2,7 +2,7 @@
 -- Chaque ligne doit afficher ok = true.
 select 'migrations enregistrées' as controle,
        (select count(*) from supabase_migrations.schema_migrations where version like '2026%')::text as valeur,
-       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 12 as ok
+       (select count(*) from supabase_migrations.schema_migrations where version like '2026%') >= 13 as ok
 union all
 select 'tables COMPLICE présentes',
        count(*)::text,
@@ -100,6 +100,19 @@ select 'couverture illustrée (migration 12)',
        case when has_column_privilege('authenticated', 'public.events', 'cover_art', 'update') then 'conforme'
             else 'ANOMALIE : appliquer 20261123001200_cover_art' end,
        coalesce(has_column_privilege('authenticated', 'public.events', 'cover_art', 'update'), false)
+union all
+select 'personne fêtée : capsule seule, invitation nominative (migration 13)',
+       case when to_regprocedure('public.beneficiary_capsule(uuid)') is not null
+             and has_function_privilege('authenticated', 'public.beneficiary_capsule(uuid)', 'execute')
+             and has_function_privilege('authenticated', 'public.resend_event_invitation(uuid)', 'execute')
+             and not has_function_privilege('authenticated', 'public.create_invitation_internal(uuid, public.member_role, integer, integer)', 'execute')
+             and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'event_members' and column_name = 'capsule_opened_at')
+            then 'conformes' else 'ANOMALIE : appliquer 20261124001300_beneficiary_capsule' end,
+       coalesce(to_regprocedure('public.beneficiary_capsule(uuid)') is not null
+         and has_function_privilege('authenticated', 'public.beneficiary_capsule(uuid)', 'execute')
+         and has_function_privilege('authenticated', 'public.resend_event_invitation(uuid)', 'execute')
+         and not has_function_privilege('authenticated', 'public.create_invitation_internal(uuid, public.member_role, integer, integer)', 'execute')
+         and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'event_members' and column_name = 'capsule_opened_at'), false)
 union all
 select 'aperçu d''invitation ouvert aux visiteurs',
        case when has_function_privilege('anon', 'public.preview_invitation(text)', 'execute') then 'ouvert' else 'fermé' end,

@@ -1,7 +1,7 @@
 import { INVITATION_EXPIRY_CHOICES, INVITE_FRIEND_MESSAGES, ROLE_LABELS, messageFor, type InviteOverviewRow, type MemberRole } from '@complice/shared';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
-import { Copy, Link2, Mail, Share2, UserPlus, Users, X } from 'lucide-react-native';
+import { Copy, Gift, Link2, Mail, RotateCw, Share2, UserPlus, Users, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, Share, View } from 'react-native';
 import { UserAvatar } from '@/components/avatar';
@@ -14,7 +14,7 @@ import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { isEmail } from '@/lib/auth-errors';
 import { invitationShareUrl, isApiConfigured } from '@/lib/env';
-import { formatShortDate } from '@/lib/format';
+import { formatEventDate, formatShortDate } from '@/lib/format';
 import { hapticSuccess, hapticTap } from '@/lib/haptics';
 import {
   useCreateInvitation,
@@ -28,12 +28,12 @@ import {
   useSetMemberRole,
   useTransferOwnership,
 } from '@/lib/queries';
-import { useCancelInvite, useFriends, useInviteFriends, useInvitesOverview } from '@/lib/social';
+import { useCancelInvite, useFriends, useInviteFriends, useInvitesOverview, useResendInvite } from '@/lib/social';
 import { useToast } from '@/lib/toast';
 import type { InvitationRow, MemberRow } from '@/lib/types';
 import { useEventId } from '@/lib/use-event-context';
 import { useNow } from '@/lib/use-now';
-import { colors, space } from '@/theme/tokens';
+import { colors, fonts, radius, space } from '@/theme/tokens';
 
 const EXPIRY_LABELS: Record<number, string> = { 24: '24 h', 72: '3 jours', 168: '7 jours', 720: '30 jours' };
 const STATUS: Record<InviteOverviewRow['status'], { label: string; tone: 'ink' | 'sun' | 'mint' | 'grey' | 'coral' }> = {
@@ -66,20 +66,34 @@ export default function Members() {
   const list = members.data ?? [];
   const preparers = list.filter((m) => m.role !== 'beneficiary');
   const beneficiary = list.find((m) => m.role === 'beneficiary');
-  const hasBeneficiary = !!event.data?.beneficiary_user_id || (overview.data ?? []).some((o) => o.role === 'beneficiary' && o.status === 'pending');
-  const pending = (overview.data ?? []).filter((o) => o.status === 'pending');
-  const history = (overview.data ?? []).filter((o) => o.status !== 'pending').slice(0, 10);
+  const others = (overview.data ?? []).filter((o) => o.role !== 'beneficiary');
+  const pending = others.filter((o) => o.status === 'pending');
+  const history = others.filter((o) => o.status !== 'pending').slice(0, 10);
+  const benefInvites = (overview.data ?? []).filter((o) => o.role === 'beneficiary');
 
   return (
     <Screen>
       <BackHeader title="Le groupe" subtitle={event.data?.title} fallback={`/event/${id}`} />
       {error ? <Banner tone="error">{error}</Banner> : null}
 
-      {isManager ? (
-        <Button label="Inviter des personnes" icon={<UserPlus size={20} color={colors.white} strokeWidth={2.25} />} onPress={() => setInviteOpen(true)} />
-      ) : null}
+      {/* La personne qui recevra la surprise, à part du groupe qui la prépare */}
+      <BeneficiarySection
+        eventId={id}
+        name={event.data?.beneficiary_name ?? 'La personne fêtée'}
+        revealAt={event.data?.reveal_at}
+        timezone={event.data?.timezone}
+        member={beneficiary}
+        invites={benefInvites}
+        isManager={isManager}
+        memberNode={beneficiary ? <MemberLine member={beneficiary} me={session?.user.id} eventId={id} myRole={myRole} onError={setError} /> : null}
+      />
 
-      <SectionHeader title="Préparent le cadeau" count={preparers.length} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md, marginTop: space.sm }}>
+        <T v="h2" accessibilityRole="header">
+          Préparent la surprise <T v="h2" color={colors.inkFaint}>{` ${preparers.length}`}</T>
+        </T>
+        {isManager ? <Button compact variant="soft" label="Inviter" icon={<UserPlus size={18} color={colors.ink} strokeWidth={2.25} />} onPress={() => setInviteOpen(true)} /> : null}
+      </View>
       {members.isPending ? (
         <SkeletonList rows={3} />
       ) : (
@@ -92,19 +106,6 @@ export default function Members() {
           ))}
         </Group>
       )}
-
-      <SectionHeader title="Personne fêtée" />
-      <Group>
-        {beneficiary ? (
-          <MemberLine member={beneficiary} me={session?.user.id} eventId={id} myRole={myRole} onError={setError} />
-        ) : (
-          <ListRow
-            title={event.data?.beneficiary_name ?? 'Bénéficiaire'}
-            subtitle={pending.some((p) => p.role === 'beneficiary') ? 'Invitation envoyée : elle ne verra rien avant l’ouverture.' : 'Pas encore invitée. Elle ne verra rien avant l’ouverture de la capsule.'}
-            left={<UserAvatar name={event.data?.beneficiary_name ?? '?'} size={44} ring={null} />}
-          />
-        )}
-      </Group>
 
       {isManager && pending.length > 0 ? (
         <>
@@ -134,14 +135,11 @@ export default function Members() {
         </>
       ) : null}
 
-      {isManager && invitations.data && invitations.data.length > 0 ? (
+      {isManager && invitations.data && invitations.data.some((inv) => inv.role !== 'beneficiary') ? (
         <>
           <SectionHeader title="Liens de partage" />
-          <T v="small" color={colors.inkSoft}>
-            Un lien de partage fonctionne pour toute personne qui le reçoit, dans la limite fixée. Désactive-le s’il circule trop.
-          </T>
           <Group>
-            {invitations.data.map((inv, i) => (
+            {invitations.data.filter((inv) => inv.role !== 'beneficiary' && inv.kind !== 'email').map((inv, i) => (
               <View key={inv.id}>
                 {i > 0 ? <Divider /> : null}
                 <LinkLine inv={inv} eventId={id} onError={setError} />
@@ -151,30 +149,14 @@ export default function Members() {
         </>
       ) : null}
 
-      {myRole && myRole !== 'organizer' ? (
-        <View style={{ gap: space.sm, marginTop: space.lg }}>
-          <T v="small" color={colors.inkSoft}>
-            Quitter le groupe : tu n’auras plus accès à la cagnotte. Tes messages restent visibles ; ta participation reste comptée dans le total.
-          </T>
-          <ConfirmButton
-            label="Quitter la cagnotte"
-            confirmLabel="Confirmer : quitter"
-            loading={leave.isPending}
-            onConfirm={async () => {
-              try {
-                await leave.mutateAsync(undefined);
-                router.replace('/events');
-              } catch (e) {
-                setError(messageFor(e));
-              }
-            }}
-          />
-        </View>
-      ) : isOrganizer ? (
-        <Banner tone="info" title="Tu organises cette cagnotte">
-          Pour quitter le groupe, transmets d’abord l’organisation à un membre (touche sa ligne).
-        </Banner>
-      ) : null}
+      {myRole ? <LeaveGroup isOrganizer={isOrganizer} loading={leave.isPending} onLeave={async () => {
+        try {
+          await leave.mutateAsync(undefined);
+          router.replace('/events');
+        } catch (e) {
+          setError(messageFor(e));
+        }
+      }} /> : null}
 
       {isManager ? (
         <InviteSheet
@@ -182,7 +164,6 @@ export default function Members() {
           onClose={() => setInviteOpen(false)}
           eventId={id}
           isOrganizer={isOrganizer}
-          hasBeneficiary={hasBeneficiary}
           memberIds={new Set(list.map((m) => m.user_id))}
           pendingIds={new Set(pending.map((p) => p.invitee_id).filter((x): x is string => !!x))}
         />
@@ -197,7 +178,6 @@ function InviteSheet({
   onClose,
   eventId,
   isOrganizer,
-  hasBeneficiary,
   memberIds,
   pendingIds,
 }: {
@@ -205,16 +185,15 @@ function InviteSheet({
   onClose: () => void;
   eventId: string;
   isOrganizer: boolean;
-  hasBeneficiary: boolean;
   memberIds: Set<string>;
   pendingIds: Set<string>;
 }) {
   const [mode, setMode] = useState<'friends' | 'email' | 'link'>('friends');
-  const roles: InviteRole[] = ['participant', ...(isOrganizer ? (['co_organizer'] as const) : []), ...(!hasBeneficiary ? (['beneficiary'] as const) : [])];
+  const roles: InviteRole[] = ['participant', ...(isOrganizer ? (['co_organizer'] as const) : [])];
   const [role, setRole] = useState<InviteRole>('participant');
   const safeRole = roles.includes(role) ? role : 'participant';
   return (
-    <Sheet visible={visible} onClose={onClose} title="Inviter" subtitle="Chaque personne choisit de rejoindre ou non : personne n’est ajouté en silence.">
+    <Sheet visible={visible} onClose={onClose} title="Inviter à préparer" subtitle="Chaque personne choisit de rejoindre ou non.">
       <Segmented
         label="Façon d’inviter"
         value={mode}
@@ -233,9 +212,7 @@ function InviteSheet({
           ))}
         </Row>
         <T v="small" color={colors.inkSoft}>
-          {safeRole === 'beneficiary'
-            ? 'La personne fêtée ne voit ni le cadeau, ni la cagnotte, ni la discussion avant l’ouverture de la capsule. Une seule invitation possible.'
-            : safeRole === 'co_organizer'
+          {safeRole === 'co_organizer'
               ? 'Un coorganisateur peut inviter, régler la cagnotte, choisir le cadeau et répartir les missions.'
               : 'Un participant propose, vote, participe, prend des missions et écrit dans la capsule.'}
         </T>
@@ -578,6 +555,155 @@ function LinkLine({ inv, eventId, onError }: { inv: InvitationRow; eventId: stri
           }}
         />
       ) : null}
+    </View>
+  );
+}
+
+// ------------------------------------------------------------------ Personne fêtée
+const BENEF_STATUS: Record<InviteOverviewRow['status'], { dot: string; text: (o: InviteOverviewRow) => string }> = {
+  pending: { dot: colors.sun, text: (o) => `Invitation envoyée ${o.kind === 'email' ? `à ${o.email_hint ?? 'son adresse'}` : 'dans l’app'} · valable jusqu’au ${formatShortDate(o.expires_at)}` },
+  accepted: { dot: colors.success, text: () => 'Invitation acceptée' },
+  declined: { dot: colors.inkLine, text: () => 'A refusé l’invitation' },
+  cancelled: { dot: colors.inkLine, text: () => 'Invitation annulée' },
+  expired: { dot: colors.inkLine, text: (o) => `Invitation expirée le ${formatShortDate(o.expires_at)}` },
+};
+
+function BeneficiarySection({
+  eventId,
+  name,
+  revealAt,
+  timezone,
+  member,
+  invites,
+  isManager,
+  memberNode,
+}: {
+  eventId: string;
+  name: string;
+  revealAt?: string;
+  timezone?: string;
+  member?: MemberRow;
+  invites: InviteOverviewRow[];
+  isManager: boolean;
+  memberNode: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const resend = useResendInvite(eventId);
+  const cancel = useCancelInvite(eventId);
+  const toast = useToast();
+  const now = useNow();
+  const last = invites[0];
+  const first = name.split(/\s+/)[0] || name;
+  const revealed = !!revealAt && new Date(revealAt).getTime() <= now;
+
+  const doResend = (o: InviteOverviewRow) =>
+    resend.mutate(o.id, {
+      onSuccess: (r) =>
+        toast.show({
+          text: r.status === 'queued' || r.status === 'invited' ? 'Invitation renvoyée' : r.status === 'resend_unavailable' ? 'Renvoi impossible : invite de nouveau avec son adresse.' : r.status === 'declined' ? 'Elle a refusé il y a moins de 7 jours.' : 'Invitation déjà traitée.',
+          tone: r.status === 'queued' || r.status === 'invited' ? 'success' : 'info',
+        }),
+      onError: (e) => toast.show({ text: messageFor(e), tone: 'error' }),
+    });
+
+  let status: { dot: string; text: string };
+  if (member) status = { dot: colors.success, text: revealed ? `A découvert sa capsule (ouverte le ${formatShortDate(revealAt!)})` : `A rejoint · sa capsule s’ouvre le ${revealAt ? formatEventDate(revealAt, timezone, false) : 'jour J'}` };
+  else if (last) status = { dot: BENEF_STATUS[last.status].dot, text: BENEF_STATUS[last.status].text(last) };
+  else status = { dot: colors.inkLine, text: 'Pas encore invitée' };
+
+  return (
+    <View style={{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+      {/* Étiquette de cadeau : un liseré de ruban, puis « Pour » */}
+      <View style={{ height: 5, backgroundColor: colors.coral }} />
+      <View style={{ padding: space.lg, paddingTop: space.md, gap: space.md }}>
+        <T v="small" color={colors.coralInk} style={{ fontFamily: fonts.extraBold }}>
+          Recevra la surprise
+        </T>
+        {member ? (
+          memberNode
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+            <UserAvatar name={name} size={48} ring={null} />
+            <T v="h2" style={{ flex: 1 }} numberOfLines={2}>
+              {name}
+            </T>
+          </View>
+        )}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 7 }} accessibilityLiveRegion="polite">
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: status.dot, marginTop: 5 }} />
+          <T v="small" color={colors.inkSoft} style={{ flex: 1, fontFamily: fonts.bold }}>
+            {status.text}
+          </T>
+        </View>
+        {isManager && !member ? (
+          last?.status === 'pending' ? (
+            <Row gap={space.sm} style={{ flexWrap: 'wrap' }}>
+              <Button compact variant="outline" label="Renvoyer" icon={<RotateCw size={16} color={colors.ink} />} loading={resend.isPending} onPress={() => doResend(last)} />
+              <Button
+                compact
+                variant="ghost"
+                label="Annuler l’invitation"
+                loading={cancel.isPending}
+                onPress={() =>
+                  cancel.mutate(
+                    { id: last.id, kind: last.kind, attached: !!last.invitee_id },
+                    { onSuccess: () => toast.show({ text: 'Invitation annulée', tone: 'info' }), onError: (e) => toast.show({ text: messageFor(e), tone: 'error' }) },
+                  )
+                }
+              />
+            </Row>
+          ) : (
+            <Row gap={space.sm} style={{ flexWrap: 'wrap' }}>
+              <Button compact label={`Inviter ${first}`} icon={<Gift size={17} color={colors.white} />} onPress={() => setOpen(true)} />
+              {last?.status === 'expired' ? <Button compact variant="outline" label="Renvoyer" icon={<RotateCw size={16} color={colors.ink} />} loading={resend.isPending} onPress={() => doResend(last)} /> : null}
+            </Row>
+          )
+        ) : null}
+      </View>
+      {isManager ? <BeneficiaryInviteSheet visible={open} onClose={() => setOpen(false)} eventId={eventId} name={first} /> : null}
+    </View>
+  );
+}
+
+function BeneficiaryInviteSheet({ visible, onClose, eventId, name }: { visible: boolean; onClose: () => void; eventId: string; name: string }) {
+  const [mode, setMode] = useState<'friends' | 'email'>('friends');
+  return (
+    <Sheet visible={visible} onClose={onClose} title={`Inviter ${name}`} subtitle="Elle verra seulement sa capsule, le jour de l’ouverture.">
+      <Segmented
+        label="Façon d’inviter"
+        value={mode}
+        onChange={setMode}
+        options={[
+          { key: 'friends', label: 'Parmi mes amis' },
+          { key: 'email', label: 'Par e-mail' },
+        ]}
+      />
+      {mode === 'friends' ? (
+        <FriendPicker eventId={eventId} role="beneficiary" memberIds={new Set()} pendingIds={new Set()} onDone={onClose} />
+      ) : (
+        <EmailInvite eventId={eventId} role="beneficiary" />
+      )}
+    </Sheet>
+  );
+}
+
+// ------------------------------------------------------------------ Quitter
+function LeaveGroup({ isOrganizer, loading, onLeave }: { isOrganizer: boolean; loading: boolean; onLeave: () => void }) {
+  const [explain, setExplain] = useState(false);
+  if (!isOrganizer) {
+    return (
+      <View style={{ marginTop: space.lg }}>
+        <ConfirmButton variant="ghost" label="Quitter la cagnotte" confirmLabel="Confirmer : quitter" loading={loading} onConfirm={onLeave} />
+      </View>
+    );
+  }
+  return (
+    <View style={{ marginTop: space.lg }}>
+      <Button variant="ghost" label="Quitter la cagnotte" onPress={() => setExplain(true)} />
+      <Sheet visible={explain} onClose={() => setExplain(false)} title="Transmets d’abord l’organisation">
+        <T color={colors.inkSoft}>Touche la ligne d’un membre puis « Transmettre l’organisation ». Tu pourras ensuite quitter le groupe ; ta participation reste comptée.</T>
+        <Button variant="secondary" label="Compris" onPress={() => setExplain(false)} />
+      </Sheet>
     </View>
   );
 }

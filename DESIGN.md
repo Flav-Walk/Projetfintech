@@ -1,5 +1,25 @@
 # DESIGN.md — COMPLICE (v4 « papier, ruban et tampon, sans violet », 2026-11-24)
 
+## v4.1 (lot 10) : personne fêtée et en-têtes
+- **En-têtes des onglets de cagnotte** (`EventTabHeader`) : plus de miniature de couverture. Ligne de retour =
+  chevron rond + nom de la cagnotte (une seule cible, retour à son accueil), actions à droite ; titre 30 ;
+  ligne d'état ; **perforation** de ticket (pointillés) nouée d'un trait de ruban à la couleur de la page
+  (soleil Idées, encre Missions, corail Capsule, menthe Discussion). `BackHeader` reprend la perforation (encre).
+- **Espace de la personne fêtée** (`app/(app)/surprise/[id].tsx`) : sa seule navigation. Toute entrée dans une
+  cagnotte (lien, notification, carte) la redirige ici (`event/[id]/_layout`). Trois états :
+  - *scellée* : enveloppe de papier, ruban corail, sceau de cire au verrou soleil (`components/sealed-capsule.tsx`),
+    respiration lente ; au toucher, elle frémit et un court message rappelle la date ; compte à rebours en
+    blocs (jours/h/min, puis h/min/s) corrigé de l'horloge du téléphone ; date d'ouverture en clair ;
+  - *prête* : le verrou s'ouvre, un halo soleil pulse sous le sceau, « Ouvrir ma capsule » apparaît ;
+  - *ouverture* (1,7 s, une fois, mémorisée côté serveur) : le sceau se détache, le ruban se dénoue en quatre,
+    le rabat se lève, des confettis de papier s'échappent, puis les mots arrivent un par un ; « Passer
+    l'animation » ; « Réduire les animations » = fondu court ; haptique de succès au bris du sceau (natif seulement).
+  - *souvenirs* : lettres manuscrites signées (avatar + prénom), galerie de photos (visionneuse plein écran),
+    merci au groupe, « Revoir l'ouverture ». Capsule vide : message honnête, pas de mise en scène.
+- **Le groupe** : la personne fêtée est une étiquette à part (« Recevra la surprise », liseré corail, statut à
+  pastille, action adaptée : Inviter [prénom] / Renvoyer / Annuler) ; puis « Préparent la surprise ». Le
+  transfert d'organisation n'est expliqué qu'au moment de quitter.
+
 ## v4 : ce qui change (prime sur v3 et v2 ci-dessous)
 - **Violet et lavande retirés** (`violet`, `violetDark`, `lavender`, `lavenderStrong` n'existent plus dans les
   jetons : toute réintroduction échoue au typage). Décision par rôle, pas par substitution :

@@ -1,19 +1,20 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
+import { ChevronLeft } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
-import { coverFor } from '@/lib/covers';
+import Svg, { Line } from 'react-native-svg';
 import type { EventRow } from '@/lib/types';
-import { colors, fonts, radius, space } from '@/theme/tokens';
-import { CoverArtView } from './cover-art';
+import { colors, fonts, space } from '@/theme/tokens';
 import { T } from './ui';
 
 /**
  * Famille d'en-têtes COMPLICE (v4).
  * - ScreenHeader : onglets principaux (Accueil, Amis, Activité, Profil). Surtitre + titre + ligne d'état.
  * - EventTabHeader : onglets d'une cagnotte (Idées, Missions, Capsule, Discussion). Une ligne de contexte
- *   (mini-couverture de la cagnotte, son titre, retour à son accueil) porte les actions ; le titre garde toute la largeur.
+ *   (chevron + nom de la cagnotte = retour à son accueil) porte les actions ; le titre garde toute la largeur ;
+ *   une perforation de ticket, nouée d'un trait de ruban à la couleur de la page, ferme l'en-tête.
  * - HeaderAction : bouton rond unique pour retour, aide, réglages, partage (44 px, filet, appui sable).
- * Le détail de marque est contextuel (couverture de la cagnotte, pseudo, compteur), jamais une décoration répétée.
+ * Pas de miniature de couverture répétée : le détail de marque vient du ruban et du papier (perforation).
  */
 
 export function HeaderAction({ label, onPress, children, variant = 'paper', hint }: { label: string; onPress: () => void; children: ReactNode; variant?: 'paper' | 'cover'; hint?: string }) {
@@ -90,13 +91,17 @@ export function ScreenHeader({
   );
 }
 
-/** Mini-couverture de la cagnotte (illustration ou couleur de son occasion). */
-function CoverChip({ event }: { event: Pick<EventRow, 'cover_path' | 'cover_art' | 'occasion'> }) {
-  const src = coverFor(event);
-  const art = src.kind === 'art' ? src.art : src.fallback;
+/**
+ * Séparateur d'en-tête : un nœud de ruban (court trait de couleur) puis une perforation de ticket.
+ * La couleur du nœud suit la page (soleil = idées, encre = missions, corail = capsule…), le reste ne change pas.
+ */
+export function Perforation({ accent = colors.coral }: { accent?: string }) {
   return (
-    <View style={{ width: 30, height: 30, borderRadius: radius.tag, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
-      <CoverArtView art={art} style={{ width: '100%', height: '100%' }} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.xs }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <View style={{ width: 22, height: 4, borderRadius: 2, backgroundColor: accent }} />
+      <Svg height={2} style={{ flex: 1 }}>
+        <Line x1="0" y1="1" x2="100%" y2="1" stroke={colors.inkLine} strokeWidth={1.5} strokeDasharray="3 5" strokeLinecap="round" />
+      </Svg>
     </View>
   );
 }
@@ -106,23 +111,28 @@ export function EventTabHeader({
   title,
   meta,
   actions,
+  accent,
 }: {
-  event: Pick<EventRow, 'id' | 'title' | 'cover_path' | 'cover_art' | 'occasion'>;
+  event: Pick<EventRow, 'id' | 'title'>;
   title: string;
   meta?: ReactNode;
   actions?: ReactNode;
+  accent?: string;
 }) {
   return (
     <View style={{ gap: space.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44 }}>
+        {/* Retour vers l'accueil de la cagnotte : chevron + nom de la cagnotte, une seule cible */}
         <Pressable
           accessibilityRole="link"
-          accessibilityLabel={`Accueil de la cagnotte ${event.title}`}
+          accessibilityLabel={`Retour à l’accueil de la cagnotte ${event.title}`}
           onPress={() => router.navigate(`/event/${event.id}` as never)}
           hitSlop={6}
           style={({ pressed }) => ({ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44, opacity: pressed ? 0.6 : 1 })}
         >
-          <CoverChip event={event} />
+          <View style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: colors.inkLine, alignItems: 'center', justifyContent: 'center' }}>
+            <ChevronLeft size={18} color={colors.ink} strokeWidth={2.4} />
+          </View>
           <T v="label" color={colors.inkSoft} numberOfLines={1} style={{ flexShrink: 1 }}>
             {event.title}
           </T>
@@ -133,6 +143,7 @@ export function EventTabHeader({
         {title}
       </T>
       {typeof meta === 'string' ? <HeaderMeta text={meta} /> : meta}
+      <Perforation accent={accent} />
     </View>
   );
 }

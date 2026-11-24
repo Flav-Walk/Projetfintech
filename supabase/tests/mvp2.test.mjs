@@ -1,7 +1,7 @@
 // Migration 10 : missions selon l'occasion, remerciements, préférence e-mail, file d'e-mails métier.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { freshDb, createUser, as, errorOf, inDays, createEvent, invite, join } from './helpers.mjs';
+import { freshDb, createUser, as, errorOf, inDays, createEvent, invite, join, joinAsBeneficiary } from './helpers.mjs';
 
 let db;
 let lea, sarah, camille, intrus;
@@ -17,7 +17,7 @@ before(async () => {
 async function groupEvent(overrides = {}) {
   const ev = await createEvent(db, lea, overrides);
   await join(db, sarah, (await invite(db, lea, ev)).token);
-  await join(db, camille, (await invite(db, lea, ev, 'beneficiary', 24, 1)).token);
+  await joinAsBeneficiary(db, lea, ev, camille);
   return ev;
 }
 const reveal = (ev) => db.query(
@@ -69,7 +69,7 @@ test('ouverture de la capsule : un e-mail par personne qui l’accepte, jamais d
   await reveal(ev);
   await as(db, 'service', `select public.run_due_reminders()`);
   await as(db, 'service', `select public.run_due_reminders()`);
-  const { rows } = await db.query(`select to_email, kind, status, payload from public.email_outbox where event_id = $1 order by to_email`, [ev]);
+  const { rows } = await db.query(`select to_email, kind, status, payload from public.email_outbox where event_id = $1 and kind = 'capsule_open' order by to_email`, [ev]);
   assert.deepEqual(rows.map((r) => r.to_email), ['camille@test.local', 'lea@test.local'], 'Sarah a refusé les e-mails');
   assert.ok(rows.every((r) => r.kind === 'capsule_open' && r.status === 'pending'));
   assert.ok(rows.every((r) => !JSON.stringify(r.payload).match(/cents|price|amount/)), 'aucune donnée financière');
@@ -134,7 +134,7 @@ test('invitation par e-mail : seul un gestionnaire peut la préparer', async () 
   assert.equal(r.status, 'queued');
   const again = (await as(db, lea, `select public.prepare_email_invitation($1, 'participant', 'ami@test.local') as r`, [ev])).rows[0].r;
   assert.equal(again.status, 'already_sent', 'même adresse dans l’heure : pas de second e-mail');
-  const { rows } = await db.query(`select to_email, payload from public.email_outbox where event_id = $1 and kind = 'invitation'`, [ev]);
+  const { rows } = await db.query(`select to_email, payload from public.email_outbox where event_id = $1 and kind = 'invitation' and payload ->> 'role' = 'participant'`, [ev]);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].to_email, 'ami@test.local');
   assert.match(rows[0].payload.token, /^[a-f0-9]{64}$/);

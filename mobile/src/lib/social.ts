@@ -204,6 +204,15 @@ export function useCancelInvite(eventId: string) {
   });
 }
 
+/** Renvoyer une invitation (ami : nouvelle invitation ; e-mail : nouveau lien, l'ancien est révoqué). */
+export function useResendInvite(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => unwrap(await supabase.rpc('resend_event_invitation', { p_id: id })) as { status: string },
+    onSettled: () => qc.invalidateQueries({ queryKey: sk.overview(eventId) }),
+  });
+}
+
 // ------------------------------------------------------------------ pseudo
 export function useUsernameAvailable(raw: string, current: string | undefined) {
   const q = useDebounced(normalizeQuery(raw), 350);

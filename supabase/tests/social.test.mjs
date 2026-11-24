@@ -3,7 +3,7 @@
 // bénéficiaire, personne extérieure, personne bloquée.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { freshDb, createUser, as, errorOf, createEvent, invite, join } from './helpers.mjs';
+import { freshDb, createUser, as, errorOf, createEvent, invite, join, joinAsBeneficiary } from './helpers.mjs';
 
 let db;
 let lea, sarah, tom, camille, intrus, troll;
@@ -221,7 +221,7 @@ test('lien de partage : règles inchangées (plusieurs personnes, sans adresse)'
 test('cagnotte : total, objectif, reste et part personnelle pour les préparateurs ; rien pour les autres', async () => {
   const ev = await createEvent(db, lea, { target: 20000 });
   await join(db, sarah, (await invite(db, lea, ev)).token);
-  await join(db, camille, (await invite(db, lea, ev, 'beneficiary', 24, 1)).token);
+  await joinAsBeneficiary(db, lea, ev, camille);
   const pay = async (uid, cents, key) => {
     const { rows: [c] } = await as(db, uid, `select (public.contribution_create($1, $2, $3)).id`, [ev, cents, key]);
     await as(db, 'service', `select public.contribution_settle($1, true, 'sim')`, [c.id]);
