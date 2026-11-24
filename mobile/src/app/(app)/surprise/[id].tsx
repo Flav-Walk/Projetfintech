@@ -173,7 +173,7 @@ function Stage({
             setNudge(true);
           } else if (phase === 'idle') start();
         }}
-        style={{ alignItems: 'center', paddingVertical: space.lg }}
+        style={{ alignItems: 'center', paddingTop: space.xxl, paddingBottom: space.sm }}
       >
         <SealedCapsule ref={ref} width={capW} state={sealed ? 'sealed' : 'ready'} reduce={reduce} />
       </Pressable>
@@ -248,7 +248,7 @@ function Memories({ data, entries, animate, onReplay, onRefresh, refreshing }: {
         </View>
       ) : (
         entries.map((e, i) => (
-          <Animated.View key={e.id} entering={animate ? FadeInDown.duration(380).delay(120 + i * 110) : undefined}>
+          <Animated.View key={e.id} entering={animate ? FadeInDown.duration(380).delay(i * 110) : undefined}>
             <Letter entry={e} index={i} onPhoto={() => setViewer(photos.findIndex((p) => p.id === e.id))} />
           </Animated.View>
         ))

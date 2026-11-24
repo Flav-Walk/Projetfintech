@@ -1,5 +1,34 @@
 # Suivi des lots
 
+## Lot 10 — Personne fêtée : invitation nominative et capsule seule ; en-têtes sans miniature (2026-11-24)
+
+**Base (migration 13 `20261124001300_beneficiary_capsule`, appliquée par l'utilisateur, 13 migrations)**
+- Rôle bénéficiaire : jamais par lien partageable (création refusée, anciens liens inutilisables) ; invitation
+  parmi les amis ou par e-mail liée à l'adresse confirmée ; une seule personne fêtée (invitations expirées
+  ignorées) ; `role_conflict` si un préparateur tente de devenir bénéficiaire ou l'inverse ; renvoi
+  (`resend_event_invitation`, adresse relue côté serveur) ; e-mail sans titre ni prénom.
+- Accès : la personne fêtée ne voit plus le cadeau retenu ni sa photo ni les compteurs des préparatifs, même
+  après l'ouverture ; `beneficiary_capsule` (état + heure serveur), `mark_capsule_opened` (ouverture vue une fois).
+- Préservation vérifiée avant application sur copie locale (migrations 1-12 + données) : 19 tables identiques,
+  seule une colonne nulle ajoutée (`event_members.capsule_opened_at`). Base distante avant application :
+  2 anciens liens de bénéficiaire, tous déjà inactifs.
+
+**App** : espace `/surprise/[id]` (scellée → prête → ouverture animée → lettres, photos, merci) ; redirection
+depuis toute page de cagnotte ; « Le groupe » recomposé ; en-têtes d'onglets sans miniature (retour + perforation).
+
+**Vérifié (base distante, comptes de démo, cagnottes d'essai à échéance courte, protections inchangées)**
+- Avant l'heure, par l'API directe : aucun mot, photo refusée (« Object not found »), ni titre ni couverture,
+  aucun compteur ; cagnotte, cadeau, idées, missions, discussion, journal, votes, participations : rien ;
+  ouverture refusée (`capsule_sealed`). Après l'heure : 2 mots publiés, brouillon jamais visible, photo
+  téléchargeable, toujours rien des préparatifs ; ouverture enregistrée. Lien générique de bénéficiaire refusé.
+- Web (Expo, Chromium, compte de Camille) : 5 URL de pages de préparateurs redirigées vers la capsule ;
+  passage à « prête » observé 0,7 s après l'échéance serveur ; ouverture, lecture, galerie ; retour ultérieur
+  sans rejeu ; animations réduites ; bandeau hors connexion sans contenu ; captures 320/360/390/412.
+- SQL (PGlite) : invitation d'un inscrit, d'une personne sans compte (code de confirmation), mauvaise adresse,
+  annulée, expirée, renvoyée, conflit de rôle (tests `supabase/tests/beneficiary.test.mjs`).
+- **Non vérifié sur téléphone** : haptique, retour Android, lecteur d'écran, mise en arrière-plan réelle,
+  fluidité de l'animation sur Android, réception réelle de l'e-mail d'invitation par la personne fêtée.
+
 ## Lot 9 — Finition visuelle, palette sans violet (2026-11-24)
 
 **Vérifications techniques (sur l'existant, avant toute modification)**

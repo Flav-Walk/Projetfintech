@@ -29,6 +29,9 @@ const W = 280;
 const H = 220;
 const CX = 140;
 const CY = 130;
+/** Le haut du dessin (au-dessus de l'enveloppe) n'est pas affiché : le sceau s'envole hors cadre sans réserver de vide. */
+const TOP = 50;
+const VH = H - TOP;
 const PAPER = '#FFF8F2';
 const PAPER_EDGE = '#E9DCCE';
 const WAX = colors.coralDark;
@@ -38,9 +41,10 @@ export type SealedCapsuleHandle = { wiggle: () => void; open: (onDone: () => voi
 
 type Props = { width: number; state: 'sealed' | 'ready'; reduce: boolean };
 
-const Layer = ({ children, style }: { children: React.ReactNode; style?: object }) => (
-  <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 }, style]}>
-    <Svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`}>
+// Styles animés à plat (un tableau imbriqué n'est pas appliqué par Reanimated sur le web).
+const Layer = ({ children, style }: { children: React.ReactNode; style?: object | object[] }) => (
+  <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 }, ...(Array.isArray(style) ? style : style ? [style] : [])]}>
+    <Svg width="100%" height="100%" viewBox={`0 ${TOP} ${W} ${VH}`}>
       {children}
     </Svg>
   </Animated.View>
@@ -79,7 +83,7 @@ function Piece({ p, o, k }: { p: (typeof PIECES)[number]; o: SharedValue<number>
     };
   });
   return (
-    <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: CX * k - 5, top: CY * k - 5, width: 10, height: 10, borderRadius: p.s === 'c' ? 5 : 2, backgroundColor: p.c }, style]} />
+    <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: CX * k - 5, top: (CY - TOP) * k - 5, width: 10, height: 10, borderRadius: p.s === 'c' ? 5 : 2, backgroundColor: p.c }, style]} />
   );
 }
 
@@ -152,8 +156,8 @@ export const SealedCapsule = forwardRef<SealedCapsuleHandle, Props>(function Sea
     transform: [{ translateY: interpolate(bob.value, [0, 1], [0, -6]) }, { rotate: `${tilt.value}deg` }],
   }));
   const body = useAnimatedStyle(() => ({
-    opacity: interpolate(o.value, [0.62, 0.95], [1, 0], 'clamp'),
-    transform: [{ scale: interpolate(o.value, [0.62, 1], [1, 0.92], 'clamp') }],
+    opacity: interpolate(o.value, [0.7, 1], [1, 0], 'clamp'),
+    transform: [{ scale: interpolate(o.value, [0.7, 1], [1, 0.94], 'clamp') }],
   }));
   const flap = useAnimatedStyle(() => ({
     opacity: interpolate(o.value, [0.45, 0.72], [1, 0], 'clamp'),
@@ -179,8 +183,8 @@ export const SealedCapsule = forwardRef<SealedCapsuleHandle, Props>(function Sea
   }));
 
   return (
-    <View style={{ width, height: H * k }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Animated.View style={[{ width, height: H * k }, whole]}>
+    <View style={{ width, height: VH * k }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <Animated.View style={[{ width, height: VH * k }, whole]}>
         {/* Ombre portée sur la table */}
         <Layer style={body}>
           <Ellipse cx={CX} cy={208} rx={112} ry={8} fill={colors.ink} opacity={0.08} />
@@ -211,7 +215,7 @@ export const SealedCapsule = forwardRef<SealedCapsuleHandle, Props>(function Sea
           <Rect x={128} y={130} width={24} height={70} fill={colors.coral} />
         </Layer>
         {/* Halo de la capsule prête */}
-        <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: (CX - 40) * k, top: (CY - 40) * k, width: 80 * k, height: 80 * k, borderRadius: 40 * k, backgroundColor: colors.sun }, glow]} />
+        <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: (CX - 40) * k, top: (CY - TOP - 40) * k, width: 80 * k, height: 80 * k, borderRadius: 40 * k, backgroundColor: colors.sun }, glow]} />
         {/* Sceau de cire et son verrou */}
         <Layer style={seal}>
           <Path d={scallop(34)} fill={WAX} />
@@ -224,7 +228,8 @@ export const SealedCapsule = forwardRef<SealedCapsuleHandle, Props>(function Sea
           <Circle cx={CX} cy={CY + 5} r={2.4} fill={WAX_DARK} />
         </Layer>
         <Layer style={[seal, opened]}>
-          <Path d={`M${CX - 7} ${CY - 2} v-8 a7 7 0 0 1 13 -3`} fill="none" stroke={colors.sun} strokeWidth={3.2} strokeLinecap="round" />
+          {/* Anse soulevée, jambe droite libre : le cadenas est visiblement ouvert */}
+          <Path d={`M${CX - 7} ${CY - 2} v-11 a7 7 0 0 1 14 0 v3`} fill="none" stroke={colors.sun} strokeWidth={3.2} strokeLinecap="round" />
           <Rect x={CX - 11} y={CY - 3} width={22} height={17} rx={4} fill={colors.sun} />
           <Circle cx={CX} cy={CY + 5} r={2.4} fill={WAX_DARK} />
         </Layer>
