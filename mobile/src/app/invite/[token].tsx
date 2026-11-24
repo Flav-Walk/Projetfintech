@@ -98,7 +98,7 @@ export default function InviteScreen() {
           <T v="h2" color={colors.white} style={{ textAlign: 'center' }}>
             Une surprise se prépare pour toi
           </T>
-          <T color={colors.lavenderStrong} style={{ textAlign: 'center' }}>
+          <T color={colors.nightSub} style={{ textAlign: 'center' }}>
             {p.organizer_name ?? 'Un proche'} et tes proches te préparent quelque chose. Tu découvriras leurs mots et leur cadeau le jour de l’ouverture : rien ne t’est montré avant.
           </T>
         </View>

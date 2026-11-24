@@ -28,8 +28,8 @@ export function Mascot({ size = 72, mood = 'happy' }: { size?: number; mood?: Mo
         </Defs>
         {mood === 'party' ? (
           <G>
-            <Rect x="6" y="14" width="6" height="3" rx="1.5" fill={colors.violet} transform="rotate(-30 9 15)" />
-            <Circle cx="92" cy="18" r="3" fill={colors.violet} />
+            <Rect x="6" y="14" width="6" height="3" rx="1.5" fill={colors.coral} transform="rotate(-30 9 15)" />
+            <Circle cx="92" cy="18" r="3" fill={colors.plum} />
             <Rect x="86" y="70" width="6" height="3" rx="1.5" fill={colors.sun} transform="rotate(25 89 71)" />
             <Circle cx="7" cy="72" r="2.5" fill={colors.sun} />
           </G>

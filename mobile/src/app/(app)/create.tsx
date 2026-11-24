@@ -157,7 +157,7 @@ export default function CreateEvent() {
       <T v="h1" accessibilityRole="header">
         {steps[step]}
       </T>
-      <ProgressBar value={((step + 1) / 3) * 100} fill={colors.violet} track={colors.lavender} height={6} label={`Étape ${step + 1} sur 3`} />
+      <ProgressBar value={((step + 1) / 3) * 100} fill={colors.ink} track={colors.sand} height={6} label={`Étape ${step + 1} sur 3`} />
 
       {step === 0 ? (
         <>
@@ -191,9 +191,9 @@ export default function CreateEvent() {
                   accessibilityRole="radio"
                   accessibilityState={{ selected: occasion === o }}
                   onPress={() => setOccasion(o)}
-                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: occasion === o ? colors.violet : colors.border, backgroundColor: occasion === o ? colors.lavender : colors.surface }}
+                  style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: occasion === o ? colors.ink : colors.border, backgroundColor: occasion === o ? colors.ink : colors.surface }}
                 >
-                  <T v="label" color={occasion === o ? colors.violetDark : colors.ink}>
+                  <T v="label" color={occasion === o ? colors.white : colors.ink}>
                     {o.charAt(0).toUpperCase() + o.slice(1)}
                   </T>
                 </Pressable>
@@ -215,12 +215,12 @@ export default function CreateEvent() {
           <Card style={{ gap: space.md }}>
             <Row style={{ justifyContent: 'space-between' }}>
               <Row gap={space.sm} style={{ flex: 1 }}>
-                {publicVotes ? <Eye size={22} color={colors.violet} strokeWidth={1.75} /> : <EyeOff size={22} color={colors.inkSoft} strokeWidth={1.75} />}
+                {publicVotes ? <Eye size={22} color={colors.ink} strokeWidth={1.75} /> : <EyeOff size={22} color={colors.inkSoft} strokeWidth={1.75} />}
                 <T v="bodyBold" style={{ flex: 1 }}>
                   Votes visibles par le groupe
                 </T>
               </Row>
-              <Switch value={publicVotes} onValueChange={setPublicVotes} trackColor={{ true: colors.violet, false: colors.border }} accessibilityLabel="Rendre visibles les votes de chacun" />
+              <Switch value={publicVotes} onValueChange={setPublicVotes} trackColor={{ true: colors.ink, false: colors.border }} accessibilityLabel="Rendre visibles les votes de chacun" />
             </Row>
             <T v="small" color={colors.inkSoft}>
               {publicVotes

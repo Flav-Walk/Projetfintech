@@ -9,7 +9,7 @@ import { colors, fonts, shadow, space } from '@/theme/tokens';
 const ICONS = { index: House, ideas: Lightbulb, missions: ListChecks, capsule: Mailbox, chat: MessagesSquare } as const;
 const LABELS = { index: 'Accueil', ideas: 'Idées', missions: 'Missions', capsule: 'Capsule', chat: 'Discussion' } as const;
 
-/** Espace d'une cagnotte : 5 onglets, pastille sur l'onglet actif. */
+/** Espace d'une cagnotte : 5 onglets. Actif : encre + repère soleil, comme la barre principale. */
 export default function EventTabs() {
   const insets = useSafeAreaInsets();
   return (
@@ -18,13 +18,13 @@ export default function EventTabs() {
       tabBar={({ state, navigateToTab }) => (
         <View
           accessibilityRole="tablist"
-          style={[{ flexDirection: 'row', backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 6), paddingTop: 6, paddingHorizontal: space.xs }, shadow.card]}
+          style={[{ flexDirection: 'row', backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 4), paddingTop: 6, paddingHorizontal: space.xs }, shadow.card]}
         >
           {state.routes.map((route, i) => {
             const name = route.name as keyof typeof ICONS;
             const Icon = ICONS[name] ?? House;
             const focused = state.index === i;
-            const color = focused ? colors.violetDark : colors.inkFaint;
+            const color = focused ? colors.ink : colors.inkFaint;
             return (
               <Pressable
                 key={route.key}
@@ -37,14 +37,13 @@ export default function EventTabs() {
                     navigateToTab(route.key);
                   }
                 }}
-                style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 52, justifyContent: 'center' }}
+                style={{ flex: 1, alignItems: 'center', gap: 3, minHeight: 52, justifyContent: 'center' }}
               >
-                <View style={{ paddingHorizontal: 14, paddingVertical: 4, borderRadius: 999, backgroundColor: focused ? colors.lavender : 'transparent' }}>
-                  <Icon size={22} color={color} strokeWidth={focused ? 2.25 : 1.75} />
-                </View>
-                <T v="small" color={focused ? colors.ink : colors.inkSoft} maxFontSizeMultiplier={1.3} numberOfLines={1} style={{ fontSize: 11, lineHeight: 14, fontFamily: focused ? fonts.extraBold : fonts.bold }}>
+                <Icon size={23} color={color} strokeWidth={focused ? 2.25 : 1.75} />
+                <T v="small" color={color} maxFontSizeMultiplier={1.3} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ fontSize: 11, lineHeight: 14, fontFamily: focused ? fonts.extraBold : fonts.bold }}>
                   {LABELS[name]}
                 </T>
+                <View style={{ width: 16, height: 3, borderRadius: 2, backgroundColor: focused ? colors.sun : 'transparent' }} />
               </Pressable>
             );
           })}

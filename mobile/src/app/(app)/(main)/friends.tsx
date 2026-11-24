@@ -1,12 +1,13 @@
 import { messageFor, type FriendRow, type ProfileSearchRow } from '@complice/shared';
 import * as Clipboard from 'expo-clipboard';
-import { AtSign, Ban, Check, Search, Share2, UserMinus, UserPlus, X } from 'lucide-react-native';
+import { AtSign, Ban, Check, Copy, Search, Share2, UserMinus, UserPlus, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Share, TextInput, View } from 'react-native';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserAvatar } from '@/components/avatar';
-import { Divider, Group, ListRow, PageHeader, Segmented, Sheet, SkeletonList, SwipeRow } from '@/components/kit';
+import { HeaderAction, ScreenHeader } from '@/components/headers';
+import { Divider, Group, ListRow, Segmented, Sheet, SkeletonList, SwipeRow } from '@/components/kit';
 import { Mascot } from '@/components/mascot';
 import { ErrorState } from '@/components/states';
 import { Button, T } from '@/components/ui';
@@ -59,28 +60,33 @@ export default function Friends() {
         contentContainerStyle={{ padding: gutter, gap: space.lg, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={friends.isRefetching} onRefresh={() => void friends.refetch()} tintColor={colors.coral} />}
       >
-        <PageHeader
+        <ScreenHeader
           title="Amis"
-          caption={me ? `Ton pseudo : @${me}` : undefined}
-          right={
+          meta={
             me ? (
+              // Le pseudo est l'élément de marque de cet écran : un petit billet qu'on copie d'un appui.
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Partager mon pseudo @${me}`}
-                onPress={shareMe}
-                onLongPress={async () => {
+                accessibilityLabel={`Ton pseudo : @${me}. Copier`}
+                onPress={async () => {
                   await Clipboard.setStringAsync(`@${me}`);
                   hapticSuccess();
                   toast.show({ text: 'Pseudo copié', tone: 'success' });
                 }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, minHeight: 40, borderRadius: radius.pill, backgroundColor: colors.lavender }}
+                hitSlop={6}
+                style={({ pressed }) => ({ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 32, paddingHorizontal: 10, borderRadius: radius.tag, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.inkLine, backgroundColor: pressed ? colors.sand : colors.surfaceSoft })}
               >
-                <Share2 size={16} color={colors.violetDark} strokeWidth={2.25} />
-                <T v="label" color={colors.violetDark}>
-                  Mon pseudo
-                </T>
+                <T v="label">@{me}</T>
+                <Copy size={14} color={colors.inkSoft} strokeWidth={2.25} />
               </Pressable>
-            ) : null
+            ) : undefined
+          }
+          actions={
+            me ? (
+              <HeaderAction label={`Partager mon pseudo @${me}`} onPress={shareMe}>
+                <Share2 size={19} color={colors.ink} strokeWidth={2.1} />
+              </HeaderAction>
+            ) : undefined
           }
         />
 
@@ -308,7 +314,7 @@ function RoundAction({ children, onPress, label, primary = false }: { children: 
       accessibilityLabel={label}
       onPress={onPress}
       hitSlop={4}
-      style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: primary ? (pressed ? colors.violetDark : colors.violet) : pressed ? colors.sand : colors.surfaceSoft })}
+      style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: primary ? (pressed ? colors.plum : colors.ink) : pressed ? colors.sand : colors.surfaceSoft })}
     >
       {children}
     </Pressable>

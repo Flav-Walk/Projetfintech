@@ -1,36 +1,25 @@
 import type { BadgeKind, EventProgress, NextAction } from '@complice/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import {
-  ArrowRight,
-  ChevronLeft,
-  ClipboardCheck,
-  Coins,
-  Gift,
-  Hourglass,
-  Lightbulb,
-  PenLine,
-  PartyPopper,
-  Settings2,
-  UserPlus,
-  Vote,
-  type LucideIcon,
-} from 'lucide-react-native';
+import { ArrowRight, ChevronLeft, ClipboardCheck, Coins, Gift, Hourglass, Lightbulb, PenLine, PartyPopper, Settings2, UserPlus, Vote, type LucideIcon } from 'lucide-react-native';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarPile } from '@/components/avatar';
 import { Deadlines } from '@/components/deadlines';
 import { EventCover } from '@/components/event-cover';
-import { FundingCard, StepTracker } from '@/components/event-parts';
+import { FundingCard } from '@/components/event-parts';
+import { HeaderAction } from '@/components/headers';
+import { Journal } from '@/components/journal';
 import { Skeleton } from '@/components/kit';
 import { Mascot } from '@/components/mascot';
+import { Preparations } from '@/components/preparations';
 import { PrivateImage } from '@/components/private-image';
 import { StampShelf, STAMP_ORDER } from '@/components/stamps';
 import { ErrorState } from '@/components/states';
-import { Banner, Button, Row, T } from '@/components/ui';
+import { Banner, Button, Row, T, TextLink } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useBadges } from '@/lib/capsule';
-import { activityLabel, formatEventDate, timeAgo } from '@/lib/format';
+import { formatEventDate } from '@/lib/format';
 import { useActivity, useEvent, useEventRealtime, useFunding, useMembers, useProgress, useRevealedGift } from '@/lib/queries';
 import type { EventRow } from '@/lib/types';
 import { useEventId } from '@/lib/use-event-context';
@@ -51,11 +40,12 @@ const NEXT: Record<NextAction, Next> = {
   open_capsule: { title: 'Ta capsule est ouverte', text: 'Des mots, des photos et un cadeau t’attendent.', label: 'Découvrir', route: 'capsule', Icon: PartyPopper, tone: 'capsule' },
   view_memories: { title: 'Revivre les souvenirs', text: 'Les mots, les photos et le cadeau.', label: 'Ouvrir la capsule', route: 'capsule', Icon: PartyPopper, tone: 'capsule' },
 };
+/** Organisation = encre (aubergine), argent = corail, idée = soleil, capsule = nuit. */
 const TONE = {
-  organise: { bg: colors.violet, fg: colors.white, sub: colors.lavenderStrong, chip: 'rgba(255,255,255,0.16)' },
-  money: { bg: colors.coral, fg: colors.white, sub: '#FFE2D8', chip: 'rgba(255,255,255,0.18)' },
+  organise: { bg: colors.ink, fg: colors.white, sub: colors.nightSub, chip: 'rgba(255,255,255,0.12)' },
+  money: { bg: colors.coralDark, fg: colors.white, sub: colors.coralSoft, chip: 'rgba(255,255,255,0.18)' },
   idea: { bg: colors.sun, fg: colors.ink, sub: colors.sunInk, chip: 'rgba(36,18,61,0.08)' },
-  capsule: { bg: colors.night, fg: colors.white, sub: colors.lavenderStrong, chip: 'rgba(255,255,255,0.12)' },
+  capsule: { bg: colors.night, fg: colors.white, sub: colors.nightSub, chip: 'rgba(255,255,255,0.12)' },
 };
 
 export default function EventHome() {
@@ -114,13 +104,13 @@ export default function EventHome() {
         <View>
           <EventCover event={e} style={{ width: '100%', height: 196 + insets.top }} />
           <View style={{ position: 'absolute', top: insets.top + space.sm, left: gutter, right: gutter, flexDirection: 'row', justifyContent: 'space-between' }}>
-            <RoundOverlay label="Retour à l’accueil" onPress={() => (router.canGoBack() ? router.back() : router.replace('/events'))}>
+            <HeaderAction variant="cover" label="Retour à l’accueil" onPress={() => (router.canGoBack() ? router.back() : router.replace('/events'))}>
               <ChevronLeft size={24} color={colors.ink} strokeWidth={2.25} />
-            </RoundOverlay>
+            </HeaderAction>
             {isManager ? (
-              <RoundOverlay label="Réglages de la cagnotte" onPress={() => go('settings')}>
+              <HeaderAction variant="cover" label="Réglages de la cagnotte" onPress={() => go('settings')}>
                 <Settings2 size={21} color={colors.ink} strokeWidth={2} />
-              </RoundOverlay>
+              </HeaderAction>
             ) : null}
           </View>
         </View>
@@ -190,46 +180,22 @@ export default function EventHome() {
                 />
               </Section>
 
-              <Preparations progress={p} onOpen={go} />
+              <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space.xl }}>
+                <Preparations progress={p} giftAt={e.gift_at} timezone={e.timezone} onOpen={go} />
+              </View>
 
               <Section title="Mes timbres" aside={<MyStampsCount eventId={id} me={session?.user.id} />}>
                 <MyStamps eventId={id} me={session?.user.id} />
               </Section>
 
-              <Section title="Dernière activité">
-                {activity.isPending ? (
-                  <Skeleton height={60} />
-                ) : (activity.data ?? []).length === 0 ? (
-                  <T color={colors.inkSoft}>Rien pour l’instant.</T>
-                ) : (
-                  <View style={{ gap: space.md }}>
-                    {(activity.data ?? []).slice(0, 5).map((a) => (
-                      <Row key={a.id} style={{ alignItems: 'flex-start' }}>
-                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.violet, marginTop: 6 }} />
-                        <T v="small" style={{ flex: 1 }}>
-                          {activityLabel(a)}
-                        </T>
-                        <T v="small" color={colors.inkFaint}>
-                          {timeAgo(a.created_at)}
-                        </T>
-                      </Row>
-                    ))}
-                  </View>
-                )}
+              <Section title="Le journal">
+                {activity.isPending ? <Skeleton height={60} /> : activity.isError ? <ErrorState error={activity.error} onRetry={() => activity.refetch()} /> : <Journal rows={activity.data ?? []} />}
               </Section>
             </>
           )}
         </View>
       </ScrollView>
     </View>
-  );
-}
-
-function RoundOverlay({ children, onPress, label }: { children: React.ReactNode; onPress: () => void; label: string }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={6} style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, backgroundColor: pressed ? colors.sand : 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' })}>
-      {children}
-    </Pressable>
   );
 }
 
@@ -299,8 +265,8 @@ function GiftBlock({ event: e, progress: p, isManager, gift, onGo }: { event: Ev
           <T v="h2" numberOfLines={2}>
             {gift.title}
           </T>
-          <T v="label" color={colors.violetDark}>
-            Voir les détails
+          <T v="label" style={{ textDecorationLine: 'underline', textDecorationColor: colors.sun }}>
+            Voir les détails →
           </T>
         </View>
       </Pressable>
@@ -316,59 +282,15 @@ function GiftBlock({ event: e, progress: p, isManager, gift, onGo }: { event: Ev
       : { title: 'Le vote est clos', text: 'L’organisation confirme le cadeau retenu.', cta: 'Voir le classement', route: 'ideas' };
   return (
     <View style={{ flexDirection: 'row', gap: space.lg, alignItems: 'center' }}>
-      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: votesOpen ? colors.lavender : colors.sunSoft, alignItems: 'center', justifyContent: 'center' }}>
-        {votesOpen ? <Vote size={26} color={colors.violet} /> : <Gift size={26} color={colors.sunInk} />}
+      <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: colors.sunSoft, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '-4deg' }] }}>
+        {votesOpen ? <Vote size={26} color={colors.sunInk} /> : <Gift size={26} color={colors.sunInk} />}
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <T v="h2">{state.title}</T>
         <T v="small" color={colors.inkSoft}>
           {votesOpen ? `${state.text} Clôture le ${formatEventDate(e.votes_close_at, e.timezone, false)}.` : state.text}
         </T>
-        <Pressable accessibilityRole="button" onPress={() => onGo(state.route)} hitSlop={8} style={{ alignSelf: 'flex-start', marginTop: 4, minHeight: 32, justifyContent: 'center' }}>
-          <T v="label" color={colors.violetDark}>
-            {state.cta} →
-          </T>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-/** Progression collective : étapes et compteurs, sans aucun montant. */
-function Preparations({ progress: p, onOpen }: { progress: EventProgress; onOpen: (r: string) => void }) {
-  const stats: { label: string; value: string; route: string; Icon: LucideIcon }[] = [
-    { label: 'idées', value: String(p.proposals), route: 'ideas', Icon: Lightbulb },
-    { label: 'missions faites', value: `${p.tasks_done}/${p.tasks_total}`, route: 'missions', Icon: ClipboardCheck },
-    { label: 'mots déposés', value: `${p.capsule_published}/${p.preparers}`, route: 'capsule', Icon: PenLine },
-  ];
-  return (
-    <View style={{ backgroundColor: colors.night, borderRadius: radius.cover, padding: space.xl, gap: space.xl }}>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <T v="h1" color={colors.white}>
-          Les préparatifs
-        </T>
-        <T v="label" color={colors.sun}>
-          {p.steps_done}/5 étapes
-        </T>
-      </Row>
-      <StepTracker progress={p} />
-      <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.14)', paddingTop: space.lg }}>
-        {stats.map((s, i) => (
-          <Pressable
-            key={s.label}
-            accessibilityRole="button"
-            accessibilityLabel={`${s.value} ${s.label}`}
-            onPress={() => onOpen(s.route)}
-            style={({ pressed }) => ({ flex: 1, gap: 2, paddingLeft: i ? space.md : 0, borderLeftWidth: i ? 1 : 0, borderLeftColor: 'rgba(255,255,255,0.14)', opacity: pressed ? 0.7 : 1 })}
-          >
-            <T v="moneySmall" color={colors.white}>
-              {s.value}
-            </T>
-            <T v="small" color={colors.lavenderStrong}>
-              {s.label}
-            </T>
-          </Pressable>
-        ))}
+        <TextLink label={state.cta} onPress={() => onGo(state.route)} />
       </View>
     </View>
   );

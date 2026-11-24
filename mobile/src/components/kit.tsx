@@ -54,7 +54,7 @@ export function Segmented<K extends string>({
 
 // ------------------------------------------------------------------ Interrupteur aux couleurs COMPLICE (iOS, Android, web)
 export function Toggle({ value, onValueChange, label, disabled }: { value: boolean; onValueChange: (v: boolean) => void; label: string; disabled?: boolean }) {
-  const webColors = Platform.OS === 'web' ? ({ activeThumbColor: colors.white, activeTrackColor: colors.violet } as object) : {};
+  const webColors = Platform.OS === 'web' ? ({ activeThumbColor: colors.white, activeTrackColor: colors.ink } as object) : {};
   return (
     <Switch
       value={value}
@@ -64,7 +64,7 @@ export function Toggle({ value, onValueChange, label, disabled }: { value: boole
         onValueChange(v);
       }}
       thumbColor={colors.white}
-      trackColor={{ true: colors.violet, false: colors.border }}
+      trackColor={{ true: colors.ink, false: colors.border }}
       ios_backgroundColor={colors.border}
       accessibilityLabel={label}
       {...webColors}
@@ -73,8 +73,8 @@ export function Toggle({ value, onValueChange, label, disabled }: { value: boole
 }
 
 // ------------------------------------------------------------------ Puce sélectionnable
-export function ChoiceChip({ label, selected, onPress, icon, tone = 'violet' }: { label: string; selected: boolean; onPress: () => void; icon?: ReactNode; tone?: 'violet' | 'coral' }) {
-  const on = tone === 'coral' ? colors.coral : colors.violet;
+export function ChoiceChip({ label, selected, onPress, icon, tone = 'ink' }: { label: string; selected: boolean; onPress: () => void; icon?: ReactNode; tone?: 'ink' | 'coral' }) {
+  const on = tone === 'coral' ? colors.coralDark : colors.ink;
   return (
     <Pressable
       accessibilityRole="radio"
@@ -83,7 +83,7 @@ export function ChoiceChip({ label, selected, onPress, icon, tone = 'violet' }: 
         hapticTap();
         onPress();
       }}
-      android_ripple={{ color: colors.lavenderStrong }}
+      android_ripple={{ color: colors.sandDeep }}
       style={{ minHeight: 44, paddingHorizontal: 16, borderRadius: radius.pill, borderWidth: 1.5, borderColor: selected ? on : colors.border, backgroundColor: selected ? on : colors.surface, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 6 }}
     >
       {icon}
@@ -149,30 +149,6 @@ export function Divider() {
   return <View style={{ height: 1, backgroundColor: colors.border }} />;
 }
 
-// ------------------------------------------------------------------ En-tête d'onglet principal
-export function PageHeader({ title, subtitle, caption, right }: { title: string; subtitle?: string | null; caption?: string; right?: ReactNode }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.md, paddingTop: space.sm }}>
-      <View style={{ flex: 1 }}>
-        {subtitle ? (
-          <T v="overline" color={colors.inkSoft}>
-            {subtitle}
-          </T>
-        ) : null}
-        <T v="h1" accessibilityRole="header">
-          {title}
-        </T>
-        {caption ? (
-          <T v="small" color={colors.inkSoft} selectable>
-            {caption}
-          </T>
-        ) : null}
-      </View>
-      {right}
-    </View>
-  );
-}
-
 // ------------------------------------------------------------------ Titre de section
 export function SectionHeader({ title, action, count }: { title: string; action?: { label: string; onPress: () => void }; count?: number }) {
   return (
@@ -183,7 +159,7 @@ export function SectionHeader({ title, action, count }: { title: string; action?
       </T>
       {action ? (
         <Pressable accessibilityRole="button" hitSlop={12} onPress={action.onPress}>
-          <T v="label" color={colors.violet}>
+          <T v="label" style={{ textDecorationLine: 'underline', textDecorationColor: colors.sun }}>
             {action.label}
           </T>
         </Pressable>
@@ -193,14 +169,14 @@ export function SectionHeader({ title, action, count }: { title: string; action?
 }
 
 // ------------------------------------------------------------------ Pastille d'icône
-export function IconCircle({ children, bg = colors.lavender, size = 44 }: { children: ReactNode; bg?: string; size?: number }) {
+export function IconCircle({ children, bg = colors.sand, size = 44 }: { children: ReactNode; bg?: string; size?: number }) {
   return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>{children}</View>;
 }
 
 // ------------------------------------------------------------------ Case à cocher ronde (sélection multiple)
 export function CheckDot({ checked }: { checked: boolean }) {
   return (
-    <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: checked ? colors.violet : colors.inkFaint, backgroundColor: checked ? colors.violet : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: checked ? colors.ink : colors.inkFaint, backgroundColor: checked ? colors.ink : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
       {checked ? <Check size={16} color={colors.white} strokeWidth={3} /> : null}
     </View>
   );

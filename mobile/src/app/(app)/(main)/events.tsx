@@ -7,6 +7,7 @@ import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserAvatar } from '@/components/avatar';
 import { FundingMini } from '@/components/event-parts';
+import { HeaderMeta, ScreenHeader } from '@/components/headers';
 import { Segmented, SkeletonList } from '@/components/kit';
 import { Mascot } from '@/components/mascot';
 import { EventCover } from '@/components/event-cover';
@@ -22,7 +23,13 @@ import { colors, fonts, gutter, radius, shadow, space } from '@/theme/tokens';
 
 function greeting(d = new Date()) {
   const h = d.getHours();
-  return h < 5 ? 'Bonne nuit' : h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+  return h < 5 ? 'Bonne nuit' : h < 18 ? 'Bonjour' : 'Bonsoir';
+}
+
+/** « Mardi 24 novembre » */
+function todayLabel(now: number) {
+  const s = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(now));
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export default function Home() {
@@ -54,19 +61,28 @@ export default function Home() {
         contentContainerStyle={{ padding: gutter, gap: space.xl, paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={events.isRefetching} onRefresh={refresh} tintColor={colors.coral} />}
       >
-        <Row style={{ justifyContent: 'space-between', alignItems: 'center', paddingTop: space.sm }}>
-          <View style={{ flex: 1 }}>
-            <T v="overline" color={colors.inkSoft}>
-              {greeting()}
-            </T>
-            <T v="h1" accessibilityRole="header" numberOfLines={2}>
-              {profile.data?.display_name ?? ' '}
-            </T>
-          </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Mon profil" onPress={() => router.push('/profile')}>
-            <UserAvatar name={profile.data?.display_name ?? '?'} path={profile.data?.avatar_path} seed={profile.data?.id} size={48} />
-          </Pressable>
-        </Row>
+        <ScreenHeader
+          eyebrow={todayLabel(now)}
+          title={`${greeting()}${profile.data?.display_name ? ` ${profile.data.display_name}` : ''}`}
+          meta={
+            events.data ? (
+              <HeaderMeta
+                dot={(invites.data ?? []).length ? colors.coral : undefined}
+                text={[
+                  current.length ? `${current.length} cagnotte${current.length > 1 ? 's' : ''} en cours` : 'Aucune cagnotte en cours',
+                  (invites.data ?? []).length ? `${invites.data!.length} invitation${invites.data!.length > 1 ? 's' : ''}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              />
+            ) : undefined
+          }
+          aside={
+            <Pressable accessibilityRole="button" accessibilityLabel="Mon profil" onPress={() => router.push('/profile')} hitSlop={4}>
+              <UserAvatar name={profile.data?.display_name ?? '?'} path={profile.data?.avatar_path} seed={profile.data?.id} size={48} />
+            </Pressable>
+          }
+        />
 
         {(invites.data ?? []).length > 0 ? (
           <View style={{ gap: space.md }}>
@@ -164,13 +180,13 @@ function InviteCard({ invite }: { invite: ReceivedInvite }) {
           <T v="bodyBold" color={surprise ? colors.white : colors.ink}>
             {surprise ? `${from} te prépare une surprise` : `${from} t’invite`}
           </T>
-          <T v="small" color={surprise ? colors.lavenderStrong : colors.inkSoft}>
+          <T v="small" color={surprise ? colors.nightSub : colors.inkSoft}>
             {surprise
               ? 'Tu ne verras rien avant le jour J : ni le cadeau, ni les mots, ni la cagnotte.'
               : `« ${invite.title} »${invite.gift_at ? ` · ${formatEventDate(invite.gift_at, undefined, false)}` : ''}${invite.member_count ? ` · ${invite.member_count} membre${invite.member_count > 1 ? 's' : ''}` : ''}`}
           </T>
           {invite.source === 'email' ? (
-            <T v="small" color={surprise ? colors.lavenderStrong : colors.inkFaint}>
+            <T v="small" color={surprise ? colors.nightSub : colors.inkFaint}>
               Reçue par e-mail
             </T>
           ) : null}
@@ -196,7 +212,7 @@ function SurpriseCard({ surprise }: { surprise: SurpriseRow }) {
         <T v="h3" color={colors.white}>
           Tes proches te préparent quelque chose
         </T>
-        <T v="small" color={colors.lavenderStrong}>
+        <T v="small" color={colors.nightSub}>
           Ouverture le {formatEventDate(surprise.reveal_at)} · {timeUntil(surprise.reveal_at, now)}
           {surprise.organizer_name ? ` · avec ${surprise.organizer_name}` : ''}
         </T>

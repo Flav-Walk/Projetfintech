@@ -3,6 +3,7 @@ import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AvatarPile, UserAvatar } from '@/components/avatar';
+import { EventTabHeader, HeaderMeta } from '@/components/headers';
 import { Mascot } from '@/components/mascot';
 import { ErrorState, Loading } from '@/components/states';
 import { T } from '@/components/ui';
@@ -91,16 +92,19 @@ export default function Chat() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: gutter, paddingTop: space.md, paddingBottom: space.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <View style={{ flex: 1 }}>
-          <T v="h1" accessibilityRole="header">
-            Discussion
-          </T>
-          <T v="small" color={colors.inkSoft} numberOfLines={1}>
-            {preparers.length} complice{preparers.length > 1 ? 's' : ''} · {event.data?.title}
-          </T>
-        </View>
-        <AvatarPile people={preparers.map((m) => ({ id: m.user_id, name: m.profiles?.display_name ?? '?', path: m.profiles?.avatar_path }))} max={3} size={30} />
+      <View style={{ paddingHorizontal: gutter, paddingTop: space.sm, paddingBottom: space.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        {event.data ? (
+          <EventTabHeader
+            event={event.data}
+            title="Discussion"
+            meta={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                <AvatarPile people={preparers.map((m) => ({ id: m.user_id, name: m.profiles?.display_name ?? '?', path: m.profiles?.avatar_path }))} max={4} size={24} />
+                <HeaderMeta text={`${preparers.length} complice${preparers.length > 1 ? 's' : ''}`} />
+              </View>
+            }
+          />
+        ) : null}
       </View>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         {messages.isPending ? (
@@ -122,9 +126,9 @@ export default function Chat() {
                     setDraft(s);
                     input.current?.focus();
                   }}
-                  style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: space.lg, borderRadius: radius.pill, backgroundColor: pressed ? colors.lavenderStrong : colors.lavender })}
+                  style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: space.lg, borderRadius: radius.pill, backgroundColor: pressed ? colors.sandDeep : colors.surface, borderWidth: 1.5, borderColor: colors.border })}
                 >
-                  <T v="label" color={colors.violetDark}>
+                  <T v="label" color={colors.ink}>
                     {s}
                   </T>
                 </Pressable>

@@ -8,6 +8,8 @@ import { colors } from '@/theme/tokens';
  * aucune ressource externe). Cadre 16:9, recadrées en remplissage pour toute proportion.
  */
 const CREAM = '#FFF8F2';
+/** Terre cuite : réservée aux illustrations (départ), famille chaude du corail. */
+const TERRACOTTA = '#A8432C';
 
 function Confetti({ seed, palette }: { seed: number; palette: string[] }) {
   const items = [];
@@ -30,22 +32,22 @@ function Art({ art }: { art: CoverArt }) {
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
             const x = 14 + i * 40;
             const y = 22 + Math.sin(i * 0.9) * 8;
-            return <Path key={i} d={`M${x} ${y} l14 0 l-7 18 z`} fill={[colors.sun, CREAM, colors.violet, colors.lavenderStrong][i % 4]} />;
+            return <Path key={i} d={`M${x} ${y} l14 0 l-7 18 z`} fill={[colors.sun, CREAM, colors.night, colors.blush][i % 4]} />;
           })}
-          <Confetti seed={3} palette={[colors.sun, CREAM, colors.lavenderStrong]} />
+          <Confetti seed={3} palette={[colors.sun, CREAM, colors.blush]} />
           {/* Gâteau */}
           <Rect x={110} y={108} width={100} height={46} rx={10} fill={CREAM} />
           <Path d="M110 122 Q122 132 135 122 T160 122 T185 122 T210 122 L210 116 Q210 108 202 108 L118 108 Q110 108 110 116 Z" fill={colors.sun} />
           <Rect x={100} y={152} width={120} height={8} rx={4} fill={colors.night} opacity={0.35} />
           {[132, 158, 184].map((x) => (
             <G key={x}>
-              <Rect x={x - 3} y={86} width={6} height={22} rx={3} fill={colors.lavenderStrong} />
+              <Rect x={x - 3} y={86} width={6} height={22} rx={3} fill={colors.blush} />
               <Path d={`M${x} 72 Q${x + 6} 80 ${x} 86 Q${x - 6} 80 ${x} 72 Z`} fill={colors.sun} />
             </G>
           ))}
           {/* Ballons */}
           <Path d="M268 120 Q262 140 270 160" stroke={CREAM} strokeWidth={1.5} fill="none" />
-          <Circle cx={268} cy={98} r={22} fill={colors.violet} />
+          <Circle cx={268} cy={98} r={22} fill={colors.night} />
           <Path d="M240 112 Q238 136 244 158" stroke={CREAM} strokeWidth={1.5} fill="none" />
           <Circle cx={240} cy={92} r={17} fill={colors.sun} />
         </G>
@@ -54,7 +56,7 @@ function Art({ art }: { art: CoverArt }) {
       return (
         <G>
           <Rect width={320} height={180} fill={colors.night} />
-          <Path d="M0 30 Q160 80 320 26" stroke={colors.lavenderStrong} strokeWidth={1.2} fill="none" opacity={0.6} />
+          <Path d="M0 30 Q160 80 320 26" stroke={colors.blush} strokeWidth={1.2} fill="none" opacity={0.6} />
           {Array.from({ length: 11 }, (_, i) => {
             const t = i / 10;
             const x = t * 320;
@@ -63,7 +65,7 @@ function Art({ art }: { art: CoverArt }) {
           })}
           <Path d="M262 70 A26 26 0 1 0 288 108 A20 20 0 1 1 262 70 Z" fill={colors.sun} />
           {[[60, 110, 7], [110, 70, 4], [200, 120, 6], [150, 150, 3], [40, 160, 4]].map(([x, y, r], i) => (
-            <Path key={i} d={`M${x} ${y! - r! * 2} L${x! + r! * 0.5} ${y! - r! * 0.5} L${x! + r! * 2} ${y} L${x! + r! * 0.5} ${y! + r! * 0.5} L${x} ${y! + r! * 2} L${x! - r! * 0.5} ${y! + r! * 0.5} L${x! - r! * 2} ${y} L${x! - r! * 0.5} ${y! - r! * 0.5} Z`} fill={i % 2 ? colors.lavenderStrong : CREAM} />
+            <Path key={i} d={`M${x} ${y! - r! * 2} L${x! + r! * 0.5} ${y! - r! * 0.5} L${x! + r! * 2} ${y} L${x! + r! * 0.5} ${y! + r! * 0.5} L${x} ${y! + r! * 2} L${x! - r! * 0.5} ${y! + r! * 0.5} L${x! - r! * 2} ${y} L${x! - r! * 0.5} ${y! - r! * 0.5} Z`} fill={i % 2 ? colors.blush : CREAM} />
           ))}
           {/* Verres */}
           <Path d="M130 104 L150 104 L144 128 L136 128 Z" fill={colors.coral} />
@@ -75,19 +77,19 @@ function Art({ art }: { art: CoverArt }) {
     case 'depart':
       return (
         <G>
-          <Rect width={320} height={180} fill={colors.violet} />
+          <Rect width={320} height={180} fill={TERRACOTTA} />
           <Path d="M30 150 Q120 140 170 96 T290 40" stroke={CREAM} strokeWidth={2.5} strokeDasharray="2 9" strokeLinecap="round" fill="none" />
           <G transform="translate(262 22) rotate(-18)">
             <Path d="M0 18 L46 0 L30 40 L22 26 Z" fill={CREAM} />
-            <Path d="M22 26 L46 0 L16 22 Z" fill={colors.lavenderStrong} />
+            <Path d="M22 26 L46 0 L16 22 Z" fill={colors.blush} />
           </G>
           {[[60, 52], [180, 140]].map(([x, y], i) => (
             <Path key={i} d={`M${x} ${y} q8 -16 24 -8 q8 -14 24 -2 q14 0 14 14 q0 12 -14 12 h-46 q-14 0 -14 -12 q0 -8 12 -4z`} fill={CREAM} opacity={0.22} />
           ))}
           {/* Valise */}
-          <Rect x={56} y={104} width={68} height={50} rx={10} fill={colors.coral} />
-          <Rect x={76} y={94} width={28} height={12} rx={6} fill="none" stroke={colors.coral} strokeWidth={5} />
-          <Rect x={56} y={122} width={68} height={6} fill={colors.sun} />
+          <Rect x={56} y={104} width={68} height={50} rx={10} fill={colors.sun} />
+          <Rect x={76} y={94} width={28} height={12} rx={6} fill="none" stroke={colors.sun} strokeWidth={5} />
+          <Rect x={56} y={122} width={68} height={6} fill={CREAM} />
           <Circle cx={68} cy={158} r={4} fill={colors.night} />
           <Circle cx={112} cy={158} r={4} fill={colors.night} />
         </G>
@@ -96,10 +98,10 @@ function Art({ art }: { art: CoverArt }) {
       return (
         <G>
           <Rect width={320} height={180} fill={colors.coralSoft} />
-          <Confetti seed={9} palette={[colors.coral, colors.sun, colors.lavenderStrong]} />
+          <Confetti seed={9} palette={[colors.coral, colors.sun, colors.blush]} />
           <Circle cx={142} cy={98} r={34} fill="none" stroke={colors.sun} strokeWidth={9} />
           <Circle cx={182} cy={98} r={34} fill="none" stroke={colors.coral} strokeWidth={9} />
-          <Path d="M168 60 l6 -10 l6 10 l-6 6 z" fill={colors.lavenderStrong} />
+          <Path d="M168 60 l6 -10 l6 10 l-6 6 z" fill={colors.blush} />
           {[[54, 140, -30], [266, 46, 150]].map(([x, y, r], i) => (
             <G key={i} transform={`translate(${x} ${y}) rotate(${r})`}>
               <Path d="M0 0 C10 -26 34 -30 44 -18" stroke={colors.success} strokeWidth={2.5} fill="none" />
@@ -116,7 +118,7 @@ function Art({ art }: { art: CoverArt }) {
           <Circle cx={60} cy={30} r={46} fill={CREAM} opacity={0.35} />
           {[
             [110, 112, colors.coral],
-            [160, 98, colors.violet],
+            [160, 98, colors.plum],
             [210, 112, colors.night],
           ].map(([x, y, c], i) => (
             <G key={i}>
@@ -134,8 +136,8 @@ function Art({ art }: { art: CoverArt }) {
     default:
       return (
         <G>
-          <Rect width={320} height={180} fill={colors.lavender} />
-          <Confetti seed={5} palette={[colors.violet, colors.coral, colors.sun]} />
+          <Rect width={320} height={180} fill={colors.sand} />
+          <Confetti seed={5} palette={[colors.plum, colors.coral, colors.sun]} />
           <Rect x={116} y={78} width={88} height={74} rx={8} fill={colors.coral} />
           <Rect x={108} y={64} width={104} height={22} rx={6} fill={colors.coralDark} />
           <Rect x={153} y={64} width={14} height={88} fill={colors.sun} />

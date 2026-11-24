@@ -27,9 +27,9 @@ export function WelcomeScene({ width, height }: { width: number; height: number 
       <Svg width={width} height={height} style={{ position: 'absolute' }} viewBox="0 0 100 92" preserveAspectRatio="xMidYMid meet">
         <Circle cx="50" cy="48" r="40" fill={colors.coralSoft} />
         <Path d="M4 70 C 26 52, 40 84, 62 66 S 92 50, 98 58" stroke={colors.sun} strokeWidth="3.2" fill="none" strokeLinecap="round" />
-        <Circle cx="14" cy="22" r="2" fill={colors.violet} />
+        <Circle cx="14" cy="22" r="2" fill={colors.plum} />
         <Circle cx="88" cy="30" r="1.6" fill={colors.coral} />
-        <Circle cx="82" cy="84" r="2.2" fill={colors.violet} opacity={0.6} />
+        <Circle cx="82" cy="84" r="2.2" fill={colors.plum} opacity={0.6} />
       </Svg>
       <Animated.View entering={reduce ? FadeIn.duration(150) : FadeIn.duration(500)} style={{ position: 'absolute', left: (width - m) / 2, top: (height - m) / 2 + height * 0.02 }}>
         <Mascot size={m} mood="wink" />
@@ -38,7 +38,7 @@ export function WelcomeScene({ width, height }: { width: number; height: number 
       {/* Le groupe */}
       <Animated.View entering={enter(0)} style={[tag, { left: 0, top: 0, transformOrigin: 'left top', transform: [{ scale: k }, { rotate: '-4deg' }] }]}>
         <View style={{ flexDirection: 'row' }}>
-          {[colors.lavenderStrong, '#FFD6C8', colors.sunSoft].map((c, i) => (
+          {[colors.blush, '#FFD6C8', colors.sunSoft].map((c, i) => (
             <View key={i} style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: c, borderWidth: 2, borderColor: colors.white, marginLeft: i ? -7 : 0 }} />
           ))}
         </View>

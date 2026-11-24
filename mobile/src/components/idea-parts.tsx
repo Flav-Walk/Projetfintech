@@ -64,8 +64,8 @@ export function ReactionBar({
               paddingHorizontal: 8,
               borderRadius: radius.pill,
               borderWidth: 1.5,
-              borderColor: selected ? colors.violet : colors.border,
-              backgroundColor: selected ? colors.lavender : colors.surface,
+              borderColor: selected ? colors.ink : colors.border,
+              backgroundColor: selected ? colors.sand : colors.surface,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
@@ -118,13 +118,13 @@ export function ProposalCard({
   const unavailable = p.status === 'unavailable';
   const share = totalVotes > 0 ? Math.round((p.vote_count * 100) / totalVotes) : 0;
   return (
-    <Card style={[{ gap: space.md }, isSelected && { borderColor: colors.violet, borderWidth: 2 }, unavailable && { opacity: 0.75 }]}>
+    <Card style={[{ gap: space.md }, isSelected && { borderColor: colors.success, borderWidth: 2 }, unavailable && { opacity: 0.75 }]}>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`${p.title}, ${formatCents(p.price_cents)}. Voir le détail`} style={{ gap: space.md }}>
         <Row style={{ alignItems: 'flex-start' }}>
           {p.image_path ? <PrivateImage path={p.image_path} style={{ width: 76, height: 76, borderRadius: 14 }} label={`Photo de ${p.title}`} /> : null}
           <View style={{ flex: 1, gap: 4 }}>
             <Row gap={space.xs} style={{ flexWrap: 'wrap' }}>
-              {isSelected ? <Chip label="Cadeau retenu" tone="lavender" /> : null}
+              {isSelected ? <Chip label="Cadeau retenu" tone="mint" /> : null}
               {rank === 1 && !tied && p.vote_count > 0 && !isSelected ? <Chip label="En tête" tone="sun" /> : null}
               {tied && p.vote_count > 0 ? <Chip label="Égalité" tone="sun" /> : null}
               {unavailable ? <Chip label="Indisponible" tone="grey" /> : null}
@@ -155,7 +155,7 @@ export function ProposalCard({
               {share} %
             </T>
           </Row>
-          <ProgressBar value={share} track={colors.lavender} fill={colors.violet} height={8} label={`${p.title} : ${share} % des voix`} />
+          <ProgressBar value={share} track={colors.sand} fill={colors.ink} height={8} label={`${p.title} : ${share} % des voix`} />
         </View>
       ) : null}
 
@@ -185,8 +185,8 @@ export function ProposalCard({
           />
         ) : isSelected ? (
           <Row gap={4}>
-            <Trophy size={18} color={colors.violet} />
-            <T v="label" color={colors.violet}>
+            <Trophy size={18} color={colors.success} />
+            <T v="label" color={colors.success}>
               Choisi par le groupe
             </T>
           </Row>

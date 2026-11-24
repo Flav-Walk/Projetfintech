@@ -45,7 +45,7 @@ export function CoverPicker({ value, onChange, occasion, onError }: { value: Cov
         accessibilityLabel="Choisir une photo dans la galerie"
         onPress={choosePhoto}
         android_ripple={{ color: colors.sand }}
-        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 52, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.field, borderWidth: 1.5, borderColor: value.kind === 'photo' || value.kind === 'current' ? colors.violet : colors.border, backgroundColor: pressed ? colors.sand : colors.surface })}
+        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 52, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.field, borderWidth: 1.5, borderColor: value.kind === 'photo' || value.kind === 'current' ? colors.ink : colors.border, backgroundColor: pressed ? colors.sand : colors.surface })}
       >
         <ImagePlus size={20} color={colors.ink} />
         <View style={{ flex: 1 }}>
@@ -54,7 +54,7 @@ export function CoverPicker({ value, onChange, occasion, onError }: { value: Cov
             Recadrée au format de la carte, visible du groupe seulement.
           </T>
         </View>
-        {value.kind !== 'art' ? <Check size={20} color={colors.violet} strokeWidth={2.5} /> : null}
+        {value.kind !== 'art' ? <Check size={20} color={colors.ink} strokeWidth={2.5} /> : null}
       </Pressable>
       <T v="label">Ou une illustration COMPLICE</T>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }} accessibilityRole="radiogroup">
@@ -72,7 +72,7 @@ export function CoverPicker({ value, onChange, occasion, onError }: { value: Cov
               }}
               style={{ width: '31.5%', gap: 4 }}
             >
-              <View style={{ borderRadius: radius.field, borderWidth: 3, borderColor: selected ? colors.violet : 'transparent', overflow: 'hidden' }}>
+              <View style={{ borderRadius: radius.field, borderWidth: 3, borderColor: selected ? colors.ink : 'transparent', overflow: 'hidden' }}>
                 <CoverArtView art={a} style={{ width: '100%', aspectRatio: 16 / 9 }} />
               </View>
               <T v="small" numberOfLines={1} color={selected ? colors.ink : colors.inkSoft} style={{ fontFamily: selected ? fonts.bold : fonts.semiBold }}>

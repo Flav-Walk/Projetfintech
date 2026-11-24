@@ -5,6 +5,7 @@ import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConfirmButton } from '@/components/confirm-button';
 import { DateField } from '@/components/date-field';
+import { EventTabHeader, HeaderMeta } from '@/components/headers';
 import { Avatar } from '@/components/event-parts';
 import { EmptyState, ErrorState, Loading } from '@/components/states';
 import { Banner, Button, Card, Chip, Field, ProgressBar, Row, T } from '@/components/ui';
@@ -76,30 +77,25 @@ export default function Missions() {
         contentContainerStyle={{ padding: gutter, gap: space.lg, paddingBottom: space.xxxl }}
         refreshControl={<RefreshControl refreshing={tasks.isRefetching} tintColor={colors.coral} onRefresh={() => void tasks.refetch()} />}
       >
-        <View style={{ gap: 4 }}>
-          <T v="h1" accessibilityRole="header">
-            Missions
-          </T>
-          <T color={colors.inkSoft}>Chaque coup de main compte, quel que soit le montant donné.</T>
-        </View>
-
-        <Card tone="violet" style={{ gap: space.sm }}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <T v="h3" color={colors.white}>
-              Avancement
-            </T>
-            <T v="label" color={colors.white}>
-              {done}/{list.length} terminées
-            </T>
-          </Row>
-          <ProgressBar value={list.length ? (done * 100) / list.length : 0} track="rgba(255,255,255,0.3)" fill={colors.white} label={`${done} missions terminées sur ${list.length}`} />
-        </Card>
+        <EventTabHeader
+          event={e}
+          title="Missions"
+          meta={
+            <View style={{ gap: space.sm }}>
+              <HeaderMeta
+                dot={list.length && done === list.length ? colors.success : done ? colors.sun : colors.inkLine}
+                text={list.length ? `${done} terminée${done > 1 ? 's' : ''} sur ${list.length} · chaque coup de main compte` : 'Ce qu’il reste à faire avant le jour J'}
+              />
+              {list.length && done ? <ProgressBar value={(done * 100) / list.length} track={colors.sand} fill={done === list.length ? colors.success : colors.ink} height={6} label={`${done} missions terminées sur ${list.length}`} /> : null}
+            </View>
+          }
+        />
 
         {notice ? <Banner tone="warning">{notice}</Banner> : null}
         {error ? <Banner tone="error">{messageFor(error)}</Banner> : null}
 
         {isManager && !locked ? (
-          <Button variant="secondary" label="Ajouter une mission" icon={<Plus size={20} color={colors.white} strokeWidth={2.5} />} onPress={() => setCreating(true)} />
+          <Button variant="soft" label="Ajouter une mission" icon={<Plus size={20} color={colors.ink} strokeWidth={2.5} />} onPress={() => setCreating(true)} />
         ) : null}
 
         {list.length === 0 ? <EmptyState title="Aucune mission" text="Ajoute ce qu’il reste à faire pour le jour J." /> : null}
@@ -114,7 +110,7 @@ export default function Missions() {
                 {t.status === 'done' ? (
                   <Check size={24} color={colors.success} strokeWidth={2.5} />
                 ) : t.status === 'claimed' ? (
-                  <Hand size={24} color={colors.violet} strokeWidth={1.75} />
+                  <Hand size={24} color={colors.ink} strokeWidth={1.75} />
                 ) : (
                   <CircleDashed size={24} color={colors.inkSoft} strokeWidth={1.75} />
                 )}
@@ -125,7 +121,7 @@ export default function Missions() {
                   <Row gap={space.xs} style={{ flexWrap: 'wrap' }}>
                     <Chip
                       label={t.status === 'done' ? 'Terminée' : t.status === 'claimed' ? (mine ? 'Ta mission' : 'Prise') : 'Libre'}
-                      tone={t.status === 'done' ? 'mint' : t.status === 'claimed' ? 'lavender' : 'grey'}
+                      tone={t.status === 'done' ? 'mint' : t.status === 'claimed' ? 'sun' : 'grey'}
                     />
                     {t.due_at ? <Chip label={`${overdue ? 'En retard · ' : ''}${formatEventDate(t.due_at, e.timezone, false)}`} tone={overdue ? 'sun' : 'grey'} /> : null}
                   </Row>
@@ -141,7 +137,7 @@ export default function Missions() {
               ) : null}
               {!locked ? (
                 <Row style={{ flexWrap: 'wrap' }} gap={space.sm}>
-                  {t.status === 'open' ? <Button compact label="Prendre la mission" loading={busy} onPress={() => onClaim(t)} /> : null}
+                  {t.status === 'open' ? <Button compact variant="outline" label="Je m’en occupe" icon={<Hand size={17} color={colors.ink} />} loading={busy} onPress={() => onClaim(t)} accessibilityHint={`Prendre la mission « ${t.title} »`} /> : null}
                   {t.status === 'claimed' && (mine || isManager) ? (
                     <Button compact variant="secondary" label="C’est fait" icon={<Check size={16} color={colors.white} strokeWidth={2.5} />} loading={busy} onPress={() => complete.mutate(t.id)} />
                   ) : null}
@@ -297,7 +293,7 @@ function CreateTask({ eventId, visible, members, onClose }: { eventId: string; v
               onPress={() => setAssignee(o.user_id)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              style={{ minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.pill, borderWidth: 1.5, borderColor: selected ? colors.violet : colors.border, backgroundColor: selected ? colors.lavender : colors.surface, justifyContent: 'center' }}
+              style={{ minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.pill, borderWidth: 1.5, borderColor: selected ? colors.ink : colors.border, backgroundColor: selected ? colors.sand : colors.surface, justifyContent: 'center' }}
             >
               <T v="label">{o.name}</T>
             </Pressable>

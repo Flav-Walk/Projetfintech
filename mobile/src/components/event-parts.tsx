@@ -1,5 +1,5 @@
-import { formatCents, fundingLabel, STEP_LABELS, type EventFunding, type EventProgress } from '@complice/shared';
-import { Check, Lock } from 'lucide-react-native';
+import { formatCents, fundingLabel, type EventFunding } from '@complice/shared';
+import { Lock } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -123,44 +123,6 @@ export function FundingMini({ collected, target, percent, goalReached }: { colle
         </T>
       </Row>
       <Meter value={percent} track={colors.coralSoft} fill={colors.coral} height={8} label={`Cagnotte : ${fundingLabel(percent, goalReached)}`} />
-    </View>
-  );
-}
-
-/** Étapes collectives (violet). Le compteur suit les étapes réellement faites. */
-export function StepTracker({ progress }: { progress: EventProgress; dark?: boolean }) {
-  const current = progress.steps.findIndex((s) => !s.done);
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-      {progress.steps.map((s, i) => {
-        const isCurrent = i === current;
-        const last = i === progress.steps.length - 1;
-        return (
-          <View key={s.key} style={{ flex: 1, alignItems: 'center', gap: 6 }} accessible accessibilityLabel={`${STEP_LABELS[s.key]} : ${s.done ? 'faite' : isCurrent ? 'en cours' : 'à venir'}`}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch' }}>
-              <View style={{ flex: 1, height: 3, backgroundColor: i === 0 ? 'transparent' : s.done || isCurrent ? colors.white : 'rgba(255,255,255,0.3)' }} />
-              <View
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 15,
-                  backgroundColor: s.done ? colors.white : isCurrent ? colors.sun : 'transparent',
-                  borderWidth: 2.5,
-                  borderColor: s.done ? colors.white : isCurrent ? colors.sun : 'rgba(255,255,255,0.45)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {s.done ? <Check size={17} color={colors.violet} strokeWidth={3} /> : <T v="small" color={isCurrent ? colors.ink : colors.white} style={{ fontFamily: fonts.extraBold }}>{i + 1}</T>}
-              </View>
-              <View style={{ flex: 1, height: 3, backgroundColor: last ? 'transparent' : s.done ? colors.white : 'rgba(255,255,255,0.3)' }} />
-            </View>
-            <T v="small" color={colors.white} numberOfLines={1} style={{ fontFamily: isCurrent ? fonts.extraBold : fonts.semiBold, opacity: s.done || isCurrent ? 1 : 0.75 }}>
-              {STEP_LABELS[s.key]}
-            </T>
-          </View>
-        );
-      })}
     </View>
   );
 }

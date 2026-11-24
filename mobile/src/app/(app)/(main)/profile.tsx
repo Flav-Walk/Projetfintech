@@ -6,7 +6,8 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { UserAvatar } from '@/components/avatar';
 import { ConfirmButton } from '@/components/confirm-button';
-import { Divider, Group, ListRow, PageHeader, SectionHeader, Sheet, Toggle } from '@/components/kit';
+import { ScreenHeader } from '@/components/headers';
+import { Divider, Group, ListRow, SectionHeader, Sheet, Toggle } from '@/components/kit';
 import { Banner, Button, Field, Row, T } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { signOutAfterDeletion, signOutEverywhere, useAuth } from '@/lib/auth';
@@ -42,7 +43,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: gutter, gap: space.lg, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-        <PageHeader title="Profil" />
+        <ScreenHeader title="Profil" meta="Ce que voient tes amis, et ce que tu reçois." />
         <View style={{ alignItems: 'center', gap: space.sm }}>
           <AvatarEditor />
           <T v="h2" style={{ textAlign: 'center' }}>
@@ -84,7 +85,7 @@ export default function ProfileScreen() {
           <Divider />
           <View style={{ paddingVertical: space.md, gap: space.sm }}>
             <Row gap={space.sm}>
-              <ShieldCheck size={22} color={colors.violet} strokeWidth={1.75} />
+              <ShieldCheck size={22} color={colors.ink} strokeWidth={1.75} />
               <T v="bodyBold">Ce que COMPLICE conserve</T>
             </Row>
             <T v="small" color={colors.inkSoft}>

@@ -1,7 +1,9 @@
 import { messageFor, type CapsuleStatus } from '@complice/shared';
-import { BookOpen, CircleHelp, Eye, Gift, HeartHandshake, ImagePlus, LockKeyhole, Mail, PenLine, X } from 'lucide-react-native';
+import { BookOpen, CircleHelp, Gift, HeartHandshake, ImagePlus, LockKeyhole, Mail, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { EventTabHeader, HeaderAction, HeaderMeta } from '@/components/headers';
 import { Sheet } from '@/components/kit';
 import Animated, { FadeIn, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,7 +18,7 @@ import { formatEventDate, timeUntil } from '@/lib/format';
 import { hapticSuccess } from '@/lib/haptics';
 import { draftKey, useLocalDraft } from '@/lib/local-drafts';
 import { pickImage, uploadImage, type PickedImage } from '@/lib/media';
-import { useEvent, useProgress, useRevealedGift } from '@/lib/queries';
+import { useEvent, useProfile, useProgress, useRevealedGift } from '@/lib/queries';
 import { supabase } from '@/lib/supabase';
 import type { CapsuleEntryRow, EventRow, ThanksRow } from '@/lib/types';
 import { useEventId } from '@/lib/use-event-context';
@@ -89,7 +91,7 @@ export default function Capsule() {
           ) : entries.isError ? (
             <ErrorState error={entries.error} onRetry={() => entries.refetch()} />
           ) : entries.data.length === 0 ? (
-            <Card tone="lavender">
+            <Card tone="soft">
               <T>Aucun mot n’a été scellé dans cette capsule.</T>
             </Card>
           ) : (
@@ -104,14 +106,24 @@ export default function Capsule() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ padding: gutter, gap: space.xl, paddingBottom: space.huge }} keyboardShouldPersistTaps="handled">
-          <Row style={{ justifyContent: 'space-between' }}>
-            <T v="display" accessibilityRole="header">
-              La capsule
-            </T>
-            <Pressable accessibilityRole="button" accessibilityLabel="Comment marche la capsule ?" onPress={() => setHelp(true)} hitSlop={6} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
-              <CircleHelp size={22} color={colors.ink} />
-            </Pressable>
-          </Row>
+          <EventTabHeader
+            event={e}
+            title="La capsule"
+            meta={
+              !isPreparer || mine.isPending ? undefined : mine.data?.status === 'published' ? (
+                <HeaderMeta dot={colors.success} text="Ton mot est déposé" />
+              ) : mine.data ? (
+                <HeaderMeta dot={colors.sun} text="Ton mot est en brouillon, visible de toi seul" />
+              ) : (
+                <HeaderMeta dot={colors.inkLine} text="Tu n’as pas encore écrit" />
+              )
+            }
+            actions={
+              <HeaderAction label="Comment marche la capsule ?" onPress={() => setHelp(true)}>
+                <CircleHelp size={21} color={colors.ink} />
+              </HeaderAction>
+            }
+          />
           <OpeningTicket event={e} photos={stats.data?.photos ?? 0} authors={stats.data?.authors ?? 0} />
           {!isPreparer ? null : mine.isPending ? (
             <Loading />
@@ -145,7 +157,7 @@ function OpeningTicket({ event, photos, authors }: { event: EventRow; photos: nu
         <T v="money" color={colors.white} maxFontSizeMultiplier={1.2}>
           {fmt({ day: 'numeric' })}
         </T>
-        <T v="small" color={colors.lavenderStrong}>
+        <T v="small" color={colors.nightSub}>
           {fmt({ hour: '2-digit', minute: '2-digit' })}
         </T>
       </View>
@@ -162,7 +174,7 @@ function OpeningTicket({ event, photos, authors }: { event: EventRow; photos: nu
         <T v="h2" color={colors.white}>
           La capsule s’ouvre le jour J
         </T>
-        <T v="small" color={colors.lavenderStrong}>
+        <T v="small" color={colors.nightSub}>
           {authors === 0 ? 'Aucun mot déposé pour l’instant' : `${authors} mot${authors > 1 ? 's' : ''} déposé${authors > 1 ? 's' : ''}${photos ? ` · ${photos} photo${photos > 1 ? 's' : ''}` : ''}`}
         </T>
       </View>
@@ -254,6 +266,7 @@ function ThanksCard({ eventId, beneficiaryName, canWrite, thanks, loading }: { e
 
 function EntryEditor({ event, entry }: { event: EventRow; entry: CapsuleEntryRow | null }) {
   const { session } = useAuth();
+  const profile = useProfile();
   const save = useSaveEntry(event.id);
   const del = useDeleteEntry(event.id);
   // Texte en cours gardé sur ce téléphone jusqu'à l'enregistrement (navigation accidentelle, fermeture).
@@ -318,38 +331,28 @@ function EntryEditor({ event, entry }: { event: EventRow; entry: CapsuleEntryRow
 
   return (
     <View style={{ gap: space.lg }}>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <T v="h1">Mon mot</T>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={preview ? 'Revenir à l’écriture' : 'Voir l’aperçu de ton mot'}
-          onPress={() => setPreview((v) => !v)}
-          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: space.lg, borderRadius: radius.pill, backgroundColor: pressed ? colors.lavenderStrong : colors.lavender })}
-        >
-          {preview ? <PenLine size={17} color={colors.violetDark} /> : <Eye size={17} color={colors.violetDark} />}
-          <T v="label" color={colors.violetDark}>
-            {preview ? 'Écrire' : 'Aperçu'}
+      {/* La lettre : un seul cadre, en écriture ou relue telle qu'elle sera découverte. */}
+      <View style={{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+        <View style={{ height: 6, backgroundColor: colors.coral }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: space.lg, paddingRight: space.xs, paddingTop: space.xs }}>
+          <T v="hand" color={colors.coralInk} style={{ flex: 1 }} numberOfLines={1}>
+            Pour {event.beneficiary_name},
           </T>
-        </Pressable>
-      </Row>
-
-      {preview ? (
-        empty ? (
-          <T color={colors.inkSoft}>Rien à prévisualiser : écris quelques mots ou ajoute une photo.</T>
-        ) : (
-          <MemoryCard
-            entry={{ id: 'preview', event_id: event.id, author_id: session?.user.id ?? '', body: body.trim() || null, photo_path: photoPath, status, published_at: null, updated_at: '', profiles: { display_name: 'Moi' } }}
-            localUri={picked?.uri}
-            light
-          />
-        )
-      ) : (
-        <View style={{ backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
-          <View style={{ height: 6, backgroundColor: colors.coral }} />
-          <View style={{ padding: space.lg, gap: space.sm }}>
-            <T v="hand" color={colors.coralInk}>
-              Pour {event.beneficiary_name},
+          <LetterToggle preview={preview} disabled={!preview && empty} onPress={() => setPreview((v) => !v)} />
+        </View>
+        {preview ? (
+          <View style={{ paddingHorizontal: space.lg, paddingBottom: space.lg, gap: space.md }} accessibilityLiveRegion="polite">
+            {picked || photoPath ? <PrivateImage path={photoPath} localUri={picked?.uri} style={{ width: '100%', aspectRatio: 1, borderRadius: radius.field }} label="Photo de ton mot" /> : null}
+            {body.trim() ? <T v="hand">{body.trim()}</T> : null}
+            <T v="label" color={colors.inkSoft} style={{ alignSelf: 'flex-end' }}>
+              — {profile.data?.display_name ?? 'Toi'}
             </T>
+            <T v="small" color={colors.inkFaint}>
+              C’est ainsi que {event.beneficiary_name} le découvrira le jour J.
+            </T>
+          </View>
+        ) : (
+          <View style={{ paddingHorizontal: space.lg, paddingBottom: space.lg, gap: space.sm }}>
             <TextInput
               value={body}
               onChangeText={setBody}
@@ -393,16 +396,19 @@ function EntryEditor({ event, entry }: { event: EventRow; entry: CapsuleEntryRow
               </T>
             </Row>
           </View>
-        </View>
-      )}
+        )}
+      </View>
 
-      <Row gap={space.sm} style={{ alignItems: 'flex-start' }}>
-        <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: statusLine.dot, marginTop: 5 }} />
-        <T v="small" color={colors.inkSoft} style={{ flex: 1 }} accessibilityLiveRegion="polite">
-          {statusLine.text}
-          {restoredUnsaved ? ' · texte retrouvé sur ce téléphone' : ''}
-        </T>
-      </Row>
+      {/* L'état général est dans l'en-tête ; ici seulement ce qui change pendant l'écriture. */}
+      {dirty || status === 'published' ? (
+        <Row gap={space.sm} style={{ alignItems: 'flex-start' }}>
+          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: statusLine.dot, marginTop: 5 }} />
+          <T v="small" color={colors.inkSoft} style={{ flex: 1 }} accessibilityLiveRegion="polite">
+            {statusLine.text}
+            {restoredUnsaved ? ' · texte retrouvé sur ce téléphone' : ''}
+          </T>
+        </Row>
+      ) : null}
 
       {error ? <Banner tone="error">{error}</Banner> : null}
       {saved && !dirty ? (
@@ -436,6 +442,50 @@ function EntryEditor({ event, entry }: { event: EventRow; entry: CapsuleEntryRow
   );
 }
 
+/**
+ * Relire / Modifier : action secondaire posée dans la lettre, à côté de « Pour X, ».
+ * Texte à l'encre et petit pictogramme dessiné (enveloppe scellée, plume), sans fond tant qu'on n'appuie pas.
+ */
+function LetterToggle({ preview, disabled, onPress }: { preview: boolean; disabled: boolean; onPress: () => void }) {
+  const fg = disabled ? colors.inkFaint : colors.ink;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={preview ? 'Modifier ton mot' : 'Relire ton mot tel qu’il sera découvert'}
+      accessibilityState={{ disabled }}
+      accessibilityHint={disabled ? 'Écris quelques mots ou ajoute une photo pour pouvoir le relire.' : undefined}
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={4}
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.tag, backgroundColor: pressed ? colors.sand : 'transparent' })}
+    >
+      {preview ? <NibGlyph color={fg} /> : <SealGlyph color={fg} seal={disabled ? colors.inkLine : colors.coral} />}
+      <T v="label" color={fg} style={{ fontFamily: fonts.extraBold }}>
+        {preview ? 'Modifier' : 'Relire'}
+      </T>
+    </Pressable>
+  );
+}
+
+function SealGlyph({ color, seal }: { color: string; seal: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 20 20">
+      <Path d="M2.5 5.5 h15 v10 h-15 z" fill="none" stroke={color} strokeWidth={1.7} strokeLinejoin="round" />
+      <Path d="M2.5 5.5 L10 11 L17.5 5.5" fill="none" stroke={color} strokeWidth={1.7} strokeLinejoin="round" />
+      <Circle cx={10} cy={11.5} r={2.8} fill={seal} />
+    </Svg>
+  );
+}
+
+function NibGlyph({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 20 20">
+      <Path d="M13.5 3 L17 6.5 L8 15.5 L3.5 16.5 L4.5 12 Z" fill="none" stroke={color} strokeWidth={1.7} strokeLinejoin="round" />
+      <Path d="M11.5 5 L15 8.5" stroke={color} strokeWidth={1.7} />
+    </Svg>
+  );
+}
+
 function RevealHeader({ event, beneficiary, count }: { event: EventRow; beneficiary: boolean; count: number }) {
   const reduce = useReducedMotion();
   return (
@@ -444,7 +494,7 @@ function RevealHeader({ event, beneficiary, count }: { event: EventRow; benefici
       <T v="h1" color={colors.white} style={{ textAlign: 'center' }} accessibilityRole="header">
         {beneficiary ? `Surprise, ${event.beneficiary_name} !` : 'La capsule est ouverte'}
       </T>
-      <T color={colors.lavenderStrong} style={{ textAlign: 'center' }}>
+      <T color={colors.nightSub} style={{ textAlign: 'center' }}>
         {count > 0 ? `${count} mot${count > 1 ? 's' : ''} de tes proches${beneficiary ? ', rien que pour toi' : ''}.` : 'Les souvenirs de ce jour.'}
       </T>
     </Animated.View>
@@ -485,7 +535,7 @@ function MemoryStory({ visible, onClose, entries, beneficiary, name }: { visible
               <View style={{ transform: [{ rotate: i % 2 ? '1.2deg' : '-1.2deg' }] }}>
                 <MemoryCard entry={x} />
               </View>
-              <T v="small" color={colors.lavenderStrong} style={{ textAlign: 'center', marginTop: space.lg }}>
+              <T v="small" color={colors.nightSub} style={{ textAlign: 'center', marginTop: space.lg }}>
                 {i < entries.length - 1 ? 'Glisse pour lire le mot suivant' : 'Glisse encore une fois'}
               </T>
             </ScrollView>
@@ -495,7 +545,7 @@ function MemoryStory({ visible, onClose, entries, beneficiary, name }: { visible
             <T v="h1" color={colors.white} style={{ textAlign: 'center' }}>
               {beneficiary ? `Tout ça, c’est pour toi, ${name}` : 'Un cadeau à plusieurs mains'}
             </T>
-            <T color={colors.lavenderStrong} style={{ textAlign: 'center', maxWidth: 320 }}>
+            <T color={colors.nightSub} style={{ textAlign: 'center', maxWidth: 320 }}>
               {beneficiary ? 'Tu peux laisser un mot de remerciement au groupe juste sous le cadeau.' : 'Merci à chaque complice : idées, votes, missions, mots. Ces souvenirs restent ici.'}
             </T>
             <Button label="Revenir à la capsule" variant="white" onPress={onClose} />

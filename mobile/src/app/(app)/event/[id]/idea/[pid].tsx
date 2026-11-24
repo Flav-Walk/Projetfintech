@@ -97,7 +97,7 @@ export default function IdeaDetail() {
         {isSelected ? <Chip label="Cadeau retenu" /> : null}
         {p.status === 'unavailable' ? <Chip label="Indisponible" tone="grey" /> : null}
         {p.status === 'withdrawn' ? <Chip label="Retirée" tone="grey" /> : null}
-        <Chip label={`${p.vote_count} voix`} tone="lavender" />
+        <Chip label={`${p.vote_count} voix`} tone="ink" />
       </Row>
 
       {p.image_path ? <PrivateImage path={p.image_path} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 20 }} label={`Photo de ${p.title}`} /> : null}
@@ -124,7 +124,7 @@ export default function IdeaDetail() {
       {error ? <Banner tone="error">{messageFor(error)}</Banner> : null}
 
       {isManager && p.status !== 'withdrawn' ? (
-        <Card tone="lavender" style={{ gap: space.md }}>
+        <Card tone="soft" style={{ gap: space.md }}>
           <T v="h3">Organisation</T>
           {isSelected ? (
             <ConfirmButton variant="outline" label="Annuler ce choix" confirmLabel="Confirmer l’annulation" loading={select.isPending} onConfirm={() => select.mutate(null)} />

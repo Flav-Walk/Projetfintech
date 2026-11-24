@@ -1,6 +1,3 @@
-import { BADGE_LABELS, type BadgeKind } from '@complice/shared';
-import type { ActivityRow } from './types';
-
 /** Fuseau de l'appareil (repli Europe/Paris). */
 export function deviceTimezone(): string {
   try {
@@ -53,37 +50,6 @@ export function timeUntil(iso: string, now = Date.now()): string {
   if (d >= 2) return `dans ${d} jours`;
   if (d === 1) return 'demain';
   return 'aujourd’hui';
-}
-
-export function activityLabel(a: ActivityRow): string {
-  const who = a.profiles?.display_name ?? 'Quelqu’un';
-  switch (a.kind) {
-    case 'event_created':
-      return `${who} a créé l’événement`;
-    case 'member_joined':
-      return `${who} a rejoint le groupe`;
-    case 'proposal_added':
-      return a.data.title ? `${who} a proposé « ${String(a.data.title)} »` : `${who} a ajouté une idée`;
-    case 'gift_selected':
-      return `${who} a choisi le cadeau`;
-    case 'contribution_confirmed':
-      // Annonce anonyme (migration 8) : ni nom ni montant.
-      return 'Une nouvelle participation a rejoint la cagnotte';
-    case 'task_claimed':
-      return `${who} a pris la mission « ${String(a.data.title ?? '')} »`;
-    case 'task_done':
-      return `${who} a terminé « ${String(a.data.title ?? '')} »`;
-    case 'badge_awarded': {
-      const b = BADGE_LABELS[a.data.badge as BadgeKind];
-      return b ? `${who} a gagné le timbre « ${b.title} »` : `${who} a gagné un timbre`;
-    }
-    case 'role_changed':
-      return `Les rôles du groupe ont changé`;
-    case 'ownership_transferred':
-      return `L’organisation a été transmise`;
-    default:
-      return `${who} a fait avancer le groupe`;
-  }
 }
 
 export function initials(name: string): string {

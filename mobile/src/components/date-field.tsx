@@ -32,7 +32,7 @@ export function DateField({ label, value, onChange, minimumDate, error, hint }: 
       <T v="label">{label}</T>
       {Platform.OS === 'ios' ? (
         <View style={{ alignItems: 'flex-start' }}>
-          <DateTimePicker value={value} mode="datetime" display="compact" locale="fr-FR" minimumDate={minimumDate} onChange={(_e, d) => d && onChange(d)} accentColor={colors.violet} />
+          <DateTimePicker value={value} mode="datetime" display="compact" locale="fr-FR" minimumDate={minimumDate} onChange={(_e, d) => d && onChange(d)} accentColor={colors.ink} />
         </View>
       ) : (
         <Pressable

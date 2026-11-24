@@ -1,12 +1,58 @@
-# DESIGN.md — COMPLICE (v3 « papier, ruban et tampon », 2026-11-24)
+# DESIGN.md — COMPLICE (v4 « papier, ruban et tampon, sans violet », 2026-11-24)
 
-## v3 : ce qui change (prime sur les sections v2 ci-dessous)
+## v4 : ce qui change (prime sur v3 et v2 ci-dessous)
+- **Violet et lavande retirés** (`violet`, `violetDark`, `lavender`, `lavenderStrong` n'existent plus dans les
+  jetons : toute réintroduction échoue au typage). Décision par rôle, pas par substitution :
+  | Rôle | v4 |
+  |---|---|
+  | Sélection (puces, segmentés, interrupteurs, coches, occasion choisie) | aplat **encre** `ink`, texte blanc ; sélection légère = filet encre sur `sand` |
+  | Liens d'action | **encre**, gras, soulignés soleil (`TextLink`), flèche « → » |
+  | Navigation (onglet actif) | icône et libellé encre + **repère soleil** de 16×3 sous le libellé ; jamais de pastille colorée |
+  | Progression d'organisation (missions, création) | encre sur piste `sand` ; menthe quand c'est fini ; corail réservé à l'argent |
+  | Notifications, pastilles de nombre | corail (`coralDark`) |
+  | Focus d'un champ | filet encre 2 px |
+  | Cartes « organisation » (prochaine étape, cadeau retenu) | aplat encre ; « idée » soleil ; « argent » corail ; « capsule » nuit |
+  | Familles d'icônes (journal, activité) | `tints` : argent (corail), soleil (fête, échéance, idée), groupe (sable/encre), fait (menthe), capsule (nuit/soleil) |
+  | Illustrations | prune/nuit/rose papier/terre cuite (`blush`, `plum`, `TERRACOTTA` réservé au dessin « départ ») |
+- **Contrastes** : bouton principal `coralDark` (4,8:1 avec le blanc ; le corail vif reste pour les aplats
+  d'illustration et la cagnotte en grands chiffres) ; `inkFaint` passe à `#7B697D` (4,7:1 sur papier).
+  Désactivé = aplat sable + texte `inkFaint` (plus de transparence qui grisait en mauve).
+- **En-têtes** (`components/headers.tsx`), une famille :
+  - `ScreenHeader` (Accueil, Amis, Activité, Profil) : surtitre corail facultatif (date), titre 32, ligne d'état
+    (`HeaderMeta`, pastille de couleur alignée sur la 1re ligne), actions rondes à droite ou avatar ;
+  - `EventTabHeader` (Idées, Missions, Capsule, Discussion) : ligne de contexte = mini-couverture de la cagnotte
+    + son titre (retour à son accueil) + actions ; titre 30 sur toute la largeur ; ligne d'état ;
+  - `BackHeader` (écrans empilés) : retour rond, titre 28, contexte ;
+  - `HeaderAction` : seul bouton d'en-tête (44 px, filet `inkLine`, appui sable ; variante `cover` sur image).
+  Le détail de marque est contextuel (couverture de la cagnotte, pseudo en billet pointillé, date du jour),
+  jamais une décoration répétée.
+- **Menu « + »** (`components/start-menu.tsx`) : une valeur d'animation pilote tout. Ouverture 280 ms
+  (courbe sortie douce, sans rebond), fermeture 190 ms ; voile papier 94 % ; le pictogramme tourne de 45°
+  (+ → ×) et le bouton passe du corail à l'encre ; les deux choix sortent du bouton, le plus proche d'abord.
+  Fenêtre modale (focus piégé, focus sur « Créer »), retour Android et Échap ferment, appuis répétés repartent
+  de la position courante, « Réduire les animations » = fondu court sans déplacement. Pictogrammes dessinés :
+  paquet ficelé (créer), billet avec lien (rejoindre).
+- **Préparatifs** (`components/preparations.tsx`, logique `lib/preparation.ts`) : quatre chantiers parallèles
+  (groupe, cadeau, achat et missions, capsule), sans numéros. États réels : fait (tampon menthe incliné),
+  en cours (soleil), pas commencé (pointillés) ; « À toi » sur le chantier de ta prochaine action ; jauge fine
+  seulement si quelque chose a commencé ; ruban « Jour J » en pied.
+- **Journal** (`components/journal.tsx`, logique `lib/journal.ts`) : repères carrés par famille reliés par un
+  filet, action puis date ; actions consécutives regroupées (< 3 h, même jour) ; 4 entrées puis
+  « Tout l'historique » en feuille. Participations : « Une nouvelle participation a été enregistrée. », jamais
+  de nom, d'avatar ni de montant.
+- **Capsule** : « Relire / Modifier » est une action texte posée dans la lettre (enveloppe scellée / plume
+  dessinées), sans fond hors appui ; l'aperçu s'affiche dans le même cadre ; l'état général du mot est dans
+  l'en-tête, la ligne d'état sous l'éditeur n'apparaît que pendant une modification ou après dépôt.
+- **Boutons** : libellé sur deux lignes au besoin (grandes polices) ; dans les listes répétées (missions),
+  l'action de carte est `outline` compacte, pas un aplat corail par carte.
+
+## v3 (historique)
 - **Méthode** : guides `mobile-app-ui-design` (hiérarchie, 60/30/10, grille 8, règle pic-fin) et
   `mobile-design` (cibles 44–48 px, zone du pouce, alternative à chaque geste, animations transform/opacité),
   appliqués sans leurs consignes web (Tailwind, CSS) incompatibles avec le natif.
 - **Palette** : papier `#FBF5EE` (60 %), aubergine `#24123D` pour texte, bulles personnelles, boutons
-  secondaires et blocs forts (30 %), accents (10 %) : corail = argent/action principale, violet = organisation
-  (sélection, progression), soleil = célébration/idée, nuit = capsule et surprise. Plus d'aplats violets répétés.
+  secondaires et blocs forts (30 %), accents (10 %) : corail = argent/action principale, ~~violet = organisation~~
+  (remplacé en v4), soleil = célébration/idée, nuit = capsule et surprise.
 - **Typographie** : 5 tailles (34/24/19/16/13), Bricolage Grotesque pour titres et chiffres, Nunito pour le
   texte, Caveat seulement pour le rendu d'un mot (jamais pour la saisie).
 - **Formes selon la fonction** : étiquette 8 (dates, statuts posés sur une image), champ 14, bloc 18,

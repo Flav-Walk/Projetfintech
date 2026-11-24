@@ -236,7 +236,7 @@ export default function Contribute() {
             <RecapLine label="Total" value={formatCents(cents + SIMULATED_FEE_CENTS, { forceDecimals: true })} strong />
           </Card>
           <Row gap={space.sm} style={{ alignItems: 'flex-start' }}>
-            <ShieldCheck size={18} color={colors.violet} style={{ marginTop: 2 }} />
+            <ShieldCheck size={18} color={colors.ink} style={{ marginTop: 2 }} />
             <T v="small" color={colors.inkSoft} style={{ flex: 1 }}>
               Ton montant reste privé : le groupe voit seulement le total.
             </T>
@@ -263,10 +263,10 @@ export default function Contribute() {
 
       {step === 'result' && result ? (
         result.status === 'confirmed' ? (
-          <Card tone="lavender" style={{ alignItems: 'center', gap: space.md }}>
+          <Card tone="sun" style={{ alignItems: 'center', gap: space.md }}>
             <Mascot size={96} mood="wink" />
             <Row gap={space.sm}>
-              <PartyPopper size={24} color={colors.violet} />
+              <PartyPopper size={24} color={colors.sunInk} />
               <T v="h2">Participation enregistrée</T>
             </Row>
             <T style={{ textAlign: 'center' }}>Merci ! Ta participation de {formatCents(result.amount_cents)} compte maintenant dans la cagnotte du groupe.</T>

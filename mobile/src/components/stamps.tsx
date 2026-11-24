@@ -8,12 +8,12 @@ import { T } from './ui';
 
 /** Couleurs pastel des timbres. Corail réservé à « Complice » (participation à la cagnotte). */
 const STAMP: Record<BadgeKind, { bg: string; fg: string; Icon: LucideIcon }> = {
-  proposer: { bg: colors.sunSoft, fg: '#8A5A00', Icon: Lightbulb },
-  voter: { bg: colors.lavender, fg: colors.violetDark, Icon: Vote },
+  proposer: { bg: colors.sunSoft, fg: colors.sunInk, Icon: Lightbulb },
+  voter: { bg: colors.sand, fg: colors.ink, Icon: Vote },
   helper: { bg: colors.mint, fg: colors.success, Icon: HandHeart },
   wordsmith: { bg: '#FFE1EC', fg: '#A3285F', Icon: PenLine },
   contributor: { bg: colors.coralSoft, fg: colors.coralDark, Icon: Coins },
-  host: { bg: '#D6ECFF', fg: '#1F5FA8', Icon: Crown },
+  host: { bg: '#F3E2C7', fg: '#6B4A1E', Icon: Crown },
 };
 
 /**

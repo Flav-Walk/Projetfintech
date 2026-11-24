@@ -95,8 +95,13 @@ export function Button({
   compact?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
-  const palette = buttonPalette[variant];
   const inactive = disabled || loading;
+  // Désactivé : aplat sable et texte gris lisible (pas de transparence qui donnerait un mauve terne).
+  const off = disabled && !loading;
+  const base = buttonPalette[variant];
+  const palette = off
+    ? { bg: base.bg === 'transparent' ? 'transparent' : colors.sand, fg: colors.inkFaint, border: base.border === 'transparent' ? 'transparent' : colors.sand, pressed: colors.sand }
+    : base;
   return (
     <Pressable
       accessibilityRole="button"
@@ -112,12 +117,11 @@ export function Button({
         { backgroundColor: palette.bg, borderColor: palette.border },
         pressed && !reduceMotion && { transform: [{ scale: 0.97 }] },
         pressed && { backgroundColor: palette.pressed },
-        disabled && !loading && { opacity: 0.4 },
         style,
       ]}
     >
-      {loading ? <ActivityIndicator color={palette.fg} /> : icon}
-      <T v="bodyBold" color={palette.fg} numberOfLines={1} style={{ fontSize: compact ? 15 : 16, flexShrink: 1 }}>
+      {loading ? <ActivityIndicator color={palette.fg} /> : icon ? <View style={off ? { opacity: 0.35 } : undefined}>{icon}</View> : null}
+      <T v="bodyBold" color={palette.fg} numberOfLines={2} style={{ fontSize: compact ? 15 : 16, flexShrink: 1, textAlign: 'center' }}>
         {label}
       </T>
       {!loading && iconRight}
@@ -126,13 +130,13 @@ export function Button({
 }
 
 const buttonPalette: Record<ButtonVariant, { bg: string; fg: string; border: string; pressed: string }> = {
-  primary: { bg: colors.coral, fg: colors.white, border: colors.coral, pressed: colors.coralDark },
+  primary: { bg: colors.coralDark, fg: colors.white, border: colors.coralDark, pressed: colors.coralPressed },
   secondary: { bg: colors.ink, fg: colors.white, border: colors.ink, pressed: colors.plum },
-  outline: { bg: 'transparent', fg: colors.ink, border: colors.ink, pressed: colors.sand },
+  outline: { bg: 'transparent', fg: colors.ink, border: colors.inkLine, pressed: colors.sand },
   ghost: { bg: 'transparent', fg: colors.ink, border: 'transparent', pressed: colors.sand },
   danger: { bg: 'transparent', fg: colors.danger, border: colors.danger, pressed: colors.dangerSoft },
   white: { bg: colors.white, fg: colors.coralInk, border: colors.white, pressed: colors.coralSoft },
-  soft: { bg: colors.lavender, fg: colors.violetDark, border: colors.lavender, pressed: colors.lavenderStrong },
+  soft: { bg: colors.sand, fg: colors.ink, border: colors.sand, pressed: colors.sandDeep },
 };
 
 // ------------------------------------------------------------------ Champ
@@ -149,7 +153,7 @@ export const Field = forwardRef<
       <View
         style={[
           styles.field,
-          focused && { borderColor: colors.violet, borderWidth: 2 },
+          focused && { borderColor: colors.ink, borderWidth: 2 },
           !!error && { borderColor: colors.danger, borderWidth: 2 },
         ]}
       >
@@ -196,15 +200,17 @@ export function Card({
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
-  tone?: 'surface' | 'lavender' | 'soft' | 'violet' | 'coral';
+  /** surface (blanc filet), soft (papier), sun (mise en avant), ink (organisation), night (capsule), coral (argent). */
+  tone?: 'surface' | 'soft' | 'sun' | 'ink' | 'night' | 'coral';
   onPress?: () => void;
   accessibilityLabel?: string;
 }) {
   const bg = {
     surface: colors.surface,
-    lavender: colors.lavender,
     soft: colors.surfaceSoft,
-    violet: colors.violet,
+    sun: colors.sunSoft,
+    ink: colors.ink,
+    night: colors.night,
     coral: colors.coral,
   }[tone];
   const base = [styles.card, { backgroundColor: bg }, (tone === 'surface' || tone === 'soft') && styles.cardBorder, style];
@@ -222,13 +228,14 @@ export function Card({
 }
 
 // ------------------------------------------------------------------ Pastille
-export function Chip({ label, tone = 'lavender' }: { label: string; tone?: 'lavender' | 'coral' | 'mint' | 'sun' | 'grey' }) {
+/** Étiquette (rayon 8, pas de pilule) : statut ou rôle. ink = rôle d'organisation, sur sable. */
+export function Chip({ label, tone = 'ink' }: { label: string; tone?: 'ink' | 'coral' | 'mint' | 'sun' | 'grey' }) {
   const map = {
-    lavender: [colors.lavender, colors.violetDark],
-    coral: [colors.coralSoft, colors.coralDark],
+    ink: [colors.sand, colors.ink],
+    coral: [colors.coralSoft, colors.coralInk],
     mint: [colors.mint, colors.success],
-    sun: [colors.sunSoft, '#8A5A00'],
-    grey: ['#F1EDF3', colors.inkSoft],
+    sun: [colors.sunSoft, colors.sunInk],
+    grey: [colors.surfaceSoft, colors.inkSoft],
   } as const;
   const [bg, fg] = map[tone];
   return (
@@ -240,10 +247,27 @@ export function Chip({ label, tone = 'lavender' }: { label: string; tone?: 'lave
   );
 }
 
+/** Lien d'action dans le texte : aubergine, gras, flèche. Secondaire, jamais coloré en violet ou corail. */
+export function TextLink({ label, onPress, accessibilityHint, color = colors.ink }: { label: string; onPress: () => void; accessibilityHint?: string; color?: string }) {
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityHint={accessibilityHint}
+      hitSlop={8}
+      onPress={onPress}
+      style={({ pressed }) => ({ alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+    >
+      <T v="label" color={color} style={{ textDecorationLine: 'underline', textDecorationColor: colors.sun }}>
+        {label} →
+      </T>
+    </Pressable>
+  );
+}
+
 // ------------------------------------------------------------------ Bandeau
 export function Banner({ tone = 'info', title, children, icon }: { tone?: 'info' | 'warning' | 'error' | 'demo'; title?: string; children?: ReactNode; icon?: ReactNode }) {
   const map = {
-    info: [colors.lavender, colors.ink],
+    info: [colors.sand, colors.ink],
     warning: [colors.sunSoft, colors.ink],
     error: [colors.dangerSoft, colors.danger],
     demo: [colors.sunSoft, colors.ink],
@@ -322,6 +346,6 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontFamily: fonts.semiBold, fontSize: 16, color: colors.ink, paddingVertical: 12 },
   card: { borderRadius: radius.card, padding: space.lg },
   cardBorder: { borderWidth: 1, borderColor: colors.border },
-  chip: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start' },
+  chip: { borderRadius: radius.tag, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
   banner: { borderRadius: radius.field, paddingVertical: space.md - 2, paddingHorizontal: space.md, flexDirection: 'row', gap: space.sm + 2, alignItems: 'center' },
 });

@@ -110,7 +110,7 @@ export default function Verify() {
     <Screen>
       <BackHeader title={type === 'recovery' ? 'Code de réinitialisation' : 'Confirme ton adresse'} fallback={type === 'recovery' ? '/forgot-password' : '/sign-up'} />
       <View style={{ alignItems: 'center', paddingVertical: space.md }}>
-        <MailCheck size={56} color={colors.violet} strokeWidth={1.5} />
+        <MailCheck size={56} color={colors.ink} strokeWidth={1.5} />
       </View>
       <T color={colors.inkSoft}>
         {type === 'recovery' ? 'Si un compte existe pour ' : justSent ? 'Un code a été demandé pour ' : 'Adresse à confirmer : '}

@@ -67,8 +67,8 @@ export default function Welcome() {
               android_ripple={{ color: colors.sand }}
               style={({ pressed }) => ({ flex: narrow ? undefined : 1, minHeight: 44, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: pressed ? colors.sand : 'transparent' })}
             >
-              <Link2 size={18} color={colors.violetDark} strokeWidth={2.25} />
-              <T v="label" color={colors.violetDark} numberOfLines={1}>
+              <Link2 size={18} color={colors.ink} strokeWidth={2.25} />
+              <T v="label" color={colors.ink} numberOfLines={1}>
                 J’ai une invitation
               </T>
             </Pressable>

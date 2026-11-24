@@ -147,7 +147,7 @@ function SettingsForm({ e, targetCents }: { e: EventRow; targetCents: number }) 
           <T v="bodyBold" style={{ flex: 1 }}>
             Votes visibles par le groupe
           </T>
-          <Switch value={publicVotes} onValueChange={setPublicVotes} disabled={frozen} trackColor={{ true: colors.violet, false: colors.border }} accessibilityLabel="Rendre visibles les votes de chacun" />
+          <Switch value={publicVotes} onValueChange={setPublicVotes} disabled={frozen} trackColor={{ true: colors.ink, false: colors.border }} accessibilityLabel="Rendre visibles les votes de chacun" />
         </Row>
         <T v="small" color={colors.inkSoft}>
           {publicVotes ? 'Chacun voit qui a voté pour quoi. Préviens le groupe de ce changement.' : 'Le groupe voit seulement le nombre de voix par idée.'}

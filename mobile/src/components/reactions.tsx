@@ -63,12 +63,12 @@ export function ReactionGlyph({ emoji, size = 24 }: { emoji: string; size?: numb
       break;
     case '🤔':
       glyph = (
-        <Face fill={colors.lavenderStrong} size={size}>
+        <Face fill={colors.blush} size={size}>
           <Path d="M11 12.5 L17 11" stroke={INK} strokeWidth="2.2" strokeLinecap="round" />
           <Ellipse cx="14.5" cy="17" rx="2" ry="2.5" fill={INK} />
           <Ellipse cx="25.5" cy="17" rx="2" ry="2.5" fill={INK} />
           <Path d="M15 26 Q20 24 25 26" stroke={INK} strokeWidth="2.4" fill="none" strokeLinecap="round" />
-          <Circle cx="31" cy="9" r="5.5" fill={colors.violet} />
+          <Circle cx="31" cy="9" r="5.5" fill={colors.plum} />
           <Path d="M29.2 7.6 Q29.4 5.6 31.2 5.7 Q33 5.9 32.8 7.6 Q32.6 8.8 31.2 9.4 L31.1 10.6" stroke={colors.white} strokeWidth="1.6" fill="none" strokeLinecap="round" />
           <Circle cx="31.1" cy="12.4" r="0.9" fill={colors.white} />
         </Face>

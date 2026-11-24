@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
-import { Bell, CalendarClock, ClipboardCheck, Gift, Heart, Mail, MessageCircle, PartyPopper, Settings2, Trophy, UserCheck, UserPlus } from 'lucide-react-native';
+import { Bell, CalendarClock, Gift, Heart, ListChecks, Mail, Mailbox, MessageCircle, Settings2, UserCheck, UserRoundPlus } from 'lucide-react-native';
 import { useEffect, useMemo } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconButton } from '@/components/icon-button';
-import { Divider, Group, IconCircle, PageHeader, SkeletonList } from '@/components/kit';
+import { HeaderAction, HeaderMeta, ScreenHeader } from '@/components/headers';
+import { Divider, Group, SkeletonList } from '@/components/kit';
 import { Mascot } from '@/components/mascot';
 import { ErrorState } from '@/components/states';
 import { T } from '@/components/ui';
@@ -14,21 +14,22 @@ import { useMarkNotificationsRead, useNotifications } from '@/lib/queries';
 import { useFriends } from '@/lib/social';
 import type { NotificationRow } from '@/lib/types';
 import { useNow } from '@/lib/use-now';
-import { colors, fonts, gutter, space } from '@/theme/tokens';
+import { colors, fonts, gutter, space, tints, type Tint } from '@/theme/tokens';
 
-type Look = { Icon: typeof Bell; bg: string; fg: string };
+/** Même familles que le journal d'une cagnotte (tokens.tints) : groupe, soleil, argent, fait, capsule. */
+type Look = { Icon: typeof Bell; tint: Tint };
 const LOOK: Record<string, Look> = {
-  friend_request: { Icon: UserPlus, bg: colors.lavender, fg: colors.violet },
-  friend_accepted: { Icon: UserCheck, bg: colors.mint, fg: colors.success },
-  event_invite: { Icon: Mail, bg: colors.coralSoft, fg: colors.coralInk },
-  invitation: { Icon: Mail, bg: colors.coralSoft, fg: colors.coralInk },
-  vote_closing: { Icon: CalendarClock, bg: colors.lavender, fg: colors.violet },
-  gift_selected: { Icon: Trophy, bg: colors.sunSoft, fg: colors.sunInk },
-  task_assigned: { Icon: ClipboardCheck, bg: colors.lavender, fg: colors.violet },
-  capsule_open: { Icon: PartyPopper, bg: colors.sunSoft, fg: colors.sunInk },
-  thanks: { Icon: Heart, bg: colors.coralSoft, fg: colors.coralInk },
-  message: { Icon: MessageCircle, bg: colors.lavender, fg: colors.violet },
-  member_joined: { Icon: UserPlus, bg: colors.mint, fg: colors.success },
+  friend_request: { Icon: UserRoundPlus, tint: 'group' },
+  friend_accepted: { Icon: UserCheck, tint: 'done' },
+  event_invite: { Icon: Mail, tint: 'money' },
+  invitation: { Icon: Mail, tint: 'money' },
+  vote_closing: { Icon: CalendarClock, tint: 'sun' },
+  gift_selected: { Icon: Gift, tint: 'sun' },
+  task_assigned: { Icon: ListChecks, tint: 'group' },
+  capsule_open: { Icon: Mailbox, tint: 'capsule' },
+  thanks: { Icon: Heart, tint: 'money' },
+  message: { Icon: MessageCircle, tint: 'group' },
+  member_joined: { Icon: UserRoundPlus, tint: 'group' },
 };
 
 function label(n: NotificationRow, names: Map<string, string>): string {
@@ -75,7 +76,8 @@ export default function Notifications() {
   const list = useNotifications();
   const friends = useFriends();
   const markRead = useMarkNotificationsRead();
-  const unread = list.data?.some((n) => !n.read_at);
+  const unreadCount = list.data?.filter((n) => !n.read_at).length ?? 0;
+  const unread = unreadCount > 0;
   const names = useMemo(() => new Map((friends.data ?? []).map((f) => [f.user_id, f.display_name])), [friends.data]);
   const now = useNow();
 
@@ -106,12 +108,13 @@ export default function Notifications() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: gutter, gap: space.lg, paddingBottom: 120 }} refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} tintColor={colors.coral} />}>
-        <PageHeader
+        <ScreenHeader
           title="Activité"
-          right={
-            <IconButton label="Préférences de notification" onPress={() => router.push('/profile')}>
-              <Settings2 size={22} color={colors.ink} strokeWidth={1.75} />
-            </IconButton>
+          meta={list.data ? <HeaderMeta dot={unreadCount ? colors.coral : colors.success} text={unreadCount ? `${unreadCount} nouveauté${unreadCount > 1 ? 's' : ''}` : 'Tout est lu'} /> : undefined}
+          actions={
+            <HeaderAction label="Préférences de notification" onPress={() => router.push('/profile')}>
+              <Settings2 size={20} color={colors.ink} strokeWidth={2} />
+            </HeaderAction>
           }
         />
         {list.isPending ? (
@@ -134,7 +137,8 @@ export default function Notifications() {
               </T>
               <Group style={{ paddingHorizontal: 0 }}>
                 {g.items.map((n, i) => {
-                  const look = LOOK[n.kind] ?? { Icon: Gift, bg: colors.lavender, fg: colors.violet };
+                  const look = LOOK[n.kind] ?? { Icon: Gift, tint: 'group' };
+                  const tint = tints[look.tint];
                   const text = label(n, names);
                   return (
                     <Animated.View key={n.id} entering={FadeIn.duration(160)}>
@@ -145,9 +149,9 @@ export default function Notifications() {
                         onPress={() => open(n)}
                         style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, backgroundColor: pressed ? colors.surfaceSoft : n.read_at ? colors.surface : '#FFFBF8' })}
                       >
-                        <IconCircle bg={look.bg} size={44}>
-                          <look.Icon size={20} color={look.fg} strokeWidth={2} />
-                        </IconCircle>
+                        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: tint.bg, alignItems: 'center', justifyContent: 'center' }}>
+                          <look.Icon size={19} color={tint.fg} strokeWidth={2.1} />
+                        </View>
                         <View style={{ flex: 1, gap: 2 }}>
                           <T v="body" style={{ fontFamily: n.read_at ? fonts.semiBold : fonts.bold }}>
                             {text}

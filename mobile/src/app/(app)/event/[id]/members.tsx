@@ -36,8 +36,8 @@ import { useNow } from '@/lib/use-now';
 import { colors, space } from '@/theme/tokens';
 
 const EXPIRY_LABELS: Record<number, string> = { 24: '24 h', 72: '3 jours', 168: '7 jours', 720: '30 jours' };
-const STATUS: Record<InviteOverviewRow['status'], { label: string; tone: 'lavender' | 'mint' | 'grey' | 'coral' }> = {
-  pending: { label: 'Envoyée', tone: 'lavender' },
+const STATUS: Record<InviteOverviewRow['status'], { label: string; tone: 'ink' | 'sun' | 'mint' | 'grey' | 'coral' }> = {
+  pending: { label: 'Envoyée', tone: 'sun' },
   accepted: { label: 'A rejoint', tone: 'mint' },
   declined: { label: 'Refusée', tone: 'grey' },
   cancelled: { label: 'Annulée', tone: 'grey' },
@@ -471,7 +471,7 @@ function InviteLine({ row, eventId }: { row: InviteOverviewRow; eventId: string 
     <ListRow
       title={name}
       subtitle={`${ROLE_LABELS[row.role]} · ${row.kind === 'email' ? 'par e-mail' : 'entre amis'} · ${row.status === 'pending' ? `expire le ${formatShortDate(row.expires_at)}` : formatShortDate(row.responded_at ?? row.created_at)}`}
-      left={row.display_name ? <UserAvatar name={row.display_name} path={row.avatar_path} seed={row.invitee_id ?? undefined} size={40} ring={null} /> : <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.lavender, alignItems: 'center', justifyContent: 'center' }}><Mail size={18} color={colors.violet} /></View>}
+      left={row.display_name ? <UserAvatar name={row.display_name} path={row.avatar_path} seed={row.invitee_id ?? undefined} size={40} ring={null} /> : <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sand, alignItems: 'center', justifyContent: 'center' }}><Mail size={18} color={colors.ink} /></View>}
       right={
         row.status === 'pending' ? (
           <Pressable
@@ -521,7 +521,7 @@ function MemberLine({ member, me, eventId, myRole, onError }: { member: MemberRo
         title={`${name}${isMe ? ' (toi)' : ''}`}
         subtitle={`${ROLE_LABELS[member.role]} · depuis le ${formatShortDate(member.joined_at)}`}
         left={<UserAvatar name={name} path={member.profiles?.avatar_path} seed={member.user_id} size={44} ring={null} />}
-        right={member.role === 'organizer' ? <Chip label="Organise" tone="coral" /> : member.role === 'co_organizer' ? <Chip label="Coorganise" tone="lavender" /> : null}
+        right={member.role === 'organizer' ? <Chip label="Organise" tone="coral" /> : member.role === 'co_organizer' ? <Chip label="Coorganise" tone="ink" /> : null}
         onPress={canPromote || canRemove ? () => setOpen(true) : undefined}
         chevron={canPromote || canRemove}
       />

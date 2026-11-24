@@ -1,5 +1,37 @@
 # Suivi des lots
 
+## Lot 9 — Finition visuelle, palette sans violet (2026-11-24)
+
+**Vérifications techniques (sur l'existant, avant toute modification)**
+- Migration 12 `cover_art` : enregistrée à distance (12 migrations), droit `update(cover_art)` effectif pour
+  `authenticated`, contrainte de valeurs en place.
+- Render sert `bb697bb` = tête de `backend` (`/health`, `email_configured: true`).
+- CORS sur l'API déployée depuis `http://localhost:8081` : preflight GET/POST 204 avec en-têtes, lecture 200,
+  création de participation 201 (simulée, cagnotte d'essai lot 7), 401 lisible, origine inconnue sans ACAO.
+- Couverture sur la vraie base (compte Léa, cagnotte d'essai) : dépôt d'une photo PNG réelle (32 134 octets),
+  relecture par URL signée identique octet pour octet, illustration « soirée » enregistrée, valeur inconnue
+  refusée (23514), état initial restauré et fichier d'essai supprimé. Le sélecteur de galerie lui-même n'a
+  pas été piloté (pas de téléphone).
+
+**Finition** (détail des règles : `DESIGN.md` v4)
+- Palette : violet et lavande retirés des jetons ; remplacement par rôle (sélection et liens à l'encre,
+  repère soleil pour l'onglet actif, progression encre/menthe, corail pour l'argent et les notifications).
+  Contrastes relevés (`coralDark` pour les boutons, `inkFaint` 4,7:1), état désactivé sans transparence.
+- Menu « + » recomposé et animé (`start-menu.tsx`) ; préparatifs en chantiers parallèles
+  (`preparations.tsx`, `lib/preparation.ts`) ; journal regroupé et anonyme (`journal.tsx`, `lib/journal.ts`) ;
+  action « Relire / Modifier » dans la lettre de capsule ; famille d'en-têtes (`headers.tsx`) sur Accueil,
+  Amis, Activité, Profil, Idées, Missions, Capsule, Discussion et écrans empilés ; couverture « départ » en
+  terre cuite ; missions : action de carte en contour.
+
+**Validation**
+- Tests : `npm test` (voir le rapport de fin de lot), dont 4 nouveaux tests mobiles (journal, préparatifs).
+- Web (rendu Expo, Chromium, compte de démo) : 72 captures 18 écrans × 320/360/390/412 sans débordement ;
+  grandes polices simulées (×1,3) en 320 et 390 ; menu « + » : vidéos `docs/captures/menu-plus-{320,390}.webm`,
+  planches image par image (ouverture ~280 ms, fermeture ~190 ms, mode réduit), Échap, croix, appuis
+  répétés, focus sur « Créer ». Avant/après : `docs/captures/lot9-avant-apres-{iphone-390,petit-320}.png`.
+- **Non vérifié sur téléphone** : retour Android, lecteur d'écran natif, haptique, encoche et barre de
+  navigation, réglage système de taille de texte, `adjustsFontSizeToFit` des onglets.
+
 ## Lot 8 — Refonte UI/UX, CORS, couvertures (2026-11-24)
 
 - **CORS** : cause = `ALLOWED_ORIGINS` absent sur Render → plugin CORS en `origin: false` → preflight 404

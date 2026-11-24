@@ -4,6 +4,7 @@ import { Lightbulb, Plus, Scale } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { EventTabHeader, HeaderMeta } from '@/components/headers';
 import { ProposalCard } from '@/components/idea-parts';
 import { ChoiceChip } from '@/components/kit';
 import { hapticSuccess } from '@/lib/haptics';
@@ -91,13 +92,11 @@ export default function Ideas() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
         <ScrollView contentContainerStyle={{ padding: gutter, gap: space.lg }}>
-          <T v="h1" accessibilityRole="header">
-            Ton cadeau
-          </T>
+          <EventTabHeader event={e} title="Ton cadeau" />
           {gift.isPending ? (
             <Loading />
           ) : gift.data ? (
-            <Card tone="lavender" style={{ gap: space.sm }}>
+            <Card tone="sun" style={{ gap: space.sm }}>
               {gift.data.image_path ? (
                 <PrivateImage path={gift.data.image_path} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16 }} label={`Photo du cadeau : ${gift.data.title}`} />
               ) : null}
@@ -129,21 +128,22 @@ export default function Ideas() {
           />
         }
       >
-        <View style={{ gap: 4 }}>
-          <T v="h1" accessibilityRole="header">
-            Choisir le cadeau
-          </T>
-          <T color={colors.inkSoft}>
-            {e.selected_proposal_id
-              ? 'Le cadeau est choisi. Merci pour vos idées !'
-              : p.votes_open
-                ? `Vote ouvert jusqu’au ${formatEventDate(e.votes_close_at, e.timezone)} (${timeUntil(e.votes_close_at, now)}). Ta voix reste modifiable.`
-                : 'Le vote est clos.'}
-          </T>
-        </View>
+        <EventTabHeader
+          event={e}
+          title="Choisir le cadeau"
+          meta={
+            e.selected_proposal_id ? (
+              <HeaderMeta dot={colors.success} text="Le cadeau est choisi. Merci pour vos idées !" />
+            ) : p.votes_open ? (
+              <HeaderMeta dot={colors.sun} text={`Vote ouvert · clôture le ${formatEventDate(e.votes_close_at, e.timezone, false)}, ${timeUntil(e.votes_close_at, now)}. Ta voix reste modifiable.`} />
+            ) : (
+              <HeaderMeta dot={colors.inkLine} text="Le vote est clos." />
+            )
+          }
+        />
 
         {selected ? (
-          <Card tone="violet" style={{ gap: 6 }}>
+          <Card tone="ink" style={{ gap: 6 }}>
             <T v="small" color={colors.white}>
               Cadeau retenu
             </T>
@@ -165,7 +165,7 @@ export default function Ideas() {
         ) : null}
 
         {votesOpen && mine ? (
-          <Card tone="lavender" style={{ gap: space.sm }}>
+          <Card tone="soft" style={{ gap: space.sm }}>
             <T v="small" color={colors.inkSoft}>
               Ta voix
             </T>
