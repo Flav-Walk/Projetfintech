@@ -1,5 +1,13 @@
 # Suivi des lots
 
+## Audit du 2026-11-24 — sécurité, confidentialité, simplification
+Rapport complet : `docs/AUDIT-2026-11-24.md` ; cartographie des données : `docs/CONFIDENTIALITE.md`.
+Corrigés : limite de débit contournable par `X-Forwarded-For` (démontré en production), ouverture de capsule
+déplaçable dans le passé (migration 14), page d'invitation qui dévoilait la surprise, métadonnées GPS des photos,
+photos non réduites (−93 % mesuré), textes contradictoires sur ce que voit la personne fêtée, export des données,
+purge planifiée, pages publiques et en-têtes HTTP, code et dépendances inutiles. 37 essais d'intrusion distants
+sans accès indu. À faire : appliquer `apply-14.sql`, déployer Render manuellement, essais téléphone.
+
 ## Lot 10 — Personne fêtée : invitation nominative et capsule seule ; en-têtes sans miniature (2026-11-24)
 
 **Base (migration 13 `20261124001300_beneficiary_capsule`, appliquée par l'utilisateur, 13 migrations)**
